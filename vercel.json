@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "api/**/*.js", "use": "@vercel/node" }
+  ],
+  "routes": [
+    { "src": "/criar-cobranca", "dest": "/api/criar-cobranca.js" },
+    { "src": "/(.*)", "dest": "/$1" }
+  ],
+  "cleanUrls": true
+}
