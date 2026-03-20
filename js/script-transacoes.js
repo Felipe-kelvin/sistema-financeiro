@@ -154,7 +154,10 @@ function atualizarUI() {
     lista.appendChild(emptyState);
   }
 
-  saldoEl.textContent = `R$ ${saldo.toFixed(2)}`;
+  saldoEl.textContent = saldo.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  });
 }
 
 // ================= EXCLUIR =================
