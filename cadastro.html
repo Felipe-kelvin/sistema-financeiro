@@ -129,6 +129,7 @@
             <input type="email" id="email" placeholder="Nome de usuário" required autocomplete="username">
             <input type="password" id="senha" placeholder="Senha" required>
             <button type="submit">Cadastrar</button>
+            <button type="button" onclick="window.location.href = 'index.html'">Voltar para Login</button>
         </form>
     </div>
 
@@ -166,6 +167,8 @@
                     criadoEm: new Date(),
                     email: user.email
                 });
+
+                alert("Usuário cadastrado com sucesso!");
 
                 console.log("Usuário criado com sucesso!");
 
