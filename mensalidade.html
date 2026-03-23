@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mensalidades - Fluxo de Caixa</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+
+<body>
+  <!-- Header -->
+  <header class="navbar">
+    <div class="navbar-container">
+      <div class="navbar-brand">
+        <i class="fas fa-cash-register"></i>
+        <span>Fluxo de Caixa</span>
+      </div>
+      <div class="navbar-menu">
+        <a href="caixa.html" class="nav-link">
+          <i class="fas fa-home"></i>Início
+        </a>
+        <a href="transacoes.html" class="nav-link">
+          <i class="fas fa-list"></i> Transações
+        </a>
+        <a href="estoque.html" class="nav-link">
+          <i class="fas fa-boxes"></i> Estoque
+        </a>
+        <a href="mensalidade.html" class="nav-link active">
+          <i class="fas fa-file-invoice-dollar"></i> Mensalidades
+        </a>
+      </div>
+      <button id="logout-btn" class="logout-btn">
+        <i class="fas fa-sign-out-alt"></i> Sair
+      </button>
+    </div>
+  </header>
+
+  <div class="main-container">
+    <div class="container">
+      <!-- Seção de Título -->
+      <section class="form-section">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <h1 class="section-title">
+              <i class="fas fa-file-invoice-dollar"></i> Mensalidades
+            </h1>
+            <p style="color: #666; margin-top: 0.5rem;">Acompanhe suas mensalidades e efetue pagamentos</p>
+          </div>
+          <button id="btn-adicionar-mensalidade" class="btn-primary" style="padding: 0.75rem 1.5rem; display:none;">
+            <i class="fas fa-plus"></i> Adicionar Mensalidade
+          </button>
+        </div>
+      </section>
+
+      <!-- Abas de Filtro -->
+      <section class="form-section">
+        <div class="tabs-container">
+          <button class="tab-btn active" onclick="filtrarMensalidades('pendente', event)">
+            <i class="fas fa-clock"></i> Pendentes
+          </button>
+          <button class="tab-btn" onclick="filtrarMensalidades('pago', event)">
+            <i class="fas fa-check-circle"></i> Pagos
+          </button>
+        </div>
+      </section>
+
+      <!-- Container de Mensalidades -->
+      <section class="form-section">
+        <div id="mensalidades-container" class="mensalidades-list">
+          <p class="loading-text">
+            <i class="fas fa-spinner fa-spin"></i> Carregando mensalidades...
+          </p>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Modal: Confirmar Pagamento -->
+  <div id="modal-pagamento" class="modal">
+    <div class="modal-content modal-pagamento-content">
+      <div class="modal-header">
+        <h2><i class="fas fa-credit-card"></i> Confirmar Pagamento</h2>
+        <button class="modal-close" onclick="fecharModal()">&times;</button>
+      </div>
+
+      <div class="payment-form-container">
+        <!-- Resumo do Pagamento -->
+        <div class="payment-summary">
+          <div class="summary-header">
+            <i class="fas fa-receipt"></i>
+            <h3>Resumo da Mensalidade</h3>
+          </div>
+          <div class="summary-details">
+            <div class="summary-item">
+              <span class="summary-label">Descrição:</span>
+              <span class="summary-value" id="pag-descricao"></span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Valor:</span>
+              <span class="summary-value payment-amount" id="pag-valor"></span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Vencimento:</span>
+              <span class="summary-value" id="pag-vencimento"></span>
+            </div>
+          </div>
+        </div>
+
+        <form id="form-pagamento" class="form-pagamento">
+          <!-- Método de Pagamento -->
+          <div class="form-section">
+            <h4><i class="fas fa-money-bill-wave"></i> Método de Pagamento</h4>
+            <div class="payment-methods-grid">
+              <div class="payment-method-option" data-value="dinheiro">
+                <input type="radio" id="metodo-dinheiro" name="metodo-pagamento" value="dinheiro" required>
+                <label for="metodo-dinheiro">
+                  <i class="fas fa-money-bill-wave"></i>
+                  <span>Dinheiro</span>
+                </label>
+              </div>
+              <div class="payment-method-option" data-value="cartao">
+                <input type="radio" id="metodo-cartao" name="metodo-pagamento" value="cartao">
+                <label for="metodo-cartao">
+                  <i class="fas fa-credit-card"></i>
+                  <span>Cartão</span>
+                </label>
+              </div>
+              <div class="payment-method-option" data-value="pix">
+                <input type="radio" id="metodo-pix" name="metodo-pagamento" value="pix">
+                <label for="metodo-pix">
+                  <i class="fas fa-qrcode"></i>
+                  <span>PIX</span>
+                </label>
+              </div>
+              <div class="payment-method-option" data-value="transferencia">
+                <input type="radio" id="metodo-transferencia" name="metodo-pagamento" value="transferencia">
+                <label for="metodo-transferencia">
+                  <i class="fas fa-university"></i>
+                  <span>Transferência</span>
+                </label>
+              </div>
+              <div class="payment-method-option" data-value="cheque">
+                <input type="radio" id="metodo-cheque" name="metodo-pagamento" value="cheque">
+                <label for="metodo-cheque">
+                  <i class="fas fa-money-check"></i>
+                  <span>Cheque</span>
+                </label>
+              </div>
+              <div class="payment-method-option" data-value="mercado_pago">
+                <input type="radio" id="metodo-mercado_pago" name="metodo-pagamento" value="mercado_pago">
+                <label for="metodo-mercado_pago">
+                  <i class="fas fa-shopping-cart"></i>
+                  <span>Mercado Pago</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Data do Pagamento -->
+          <div class="form-section">
+            <h4><i class="fas fa-calendar-alt"></i> Data do Pagamento</h4>
+            <div class="form-group">
+              <input type="date" id="data-pagamento" required>
+            </div>
+          </div>
+
+          <!-- Observações -->
+          <div class="form-section">
+            <h4><i class="fas fa-comment"></i> Observações (opcional)</h4>
+            <div class="form-group">
+              <textarea id="observacoes" placeholder="Adicione observações sobre o pagamento..." rows="3"></textarea>
+            </div>
+          </div>
+
+          <!-- Botões de Ação -->
+          <div class="form-actions-payment">
+            <button type="button" class="btn-secondary" onclick="fecharModal()">
+              <i class="fas fa-times"></i> Cancelar
+            </button>
+            <button type="submit" class="btn-pagar-submit">
+              <i class="fas fa-check"></i> Confirmar Pagamento
+            </button>
+          </div>
+        </form>
+
+        <!-- Área PIX -->
+        <div id="pix-area" class="pix-payment-area" style="display:none">
+          <div class="pix-header">
+            <i class="fas fa-qrcode"></i>
+            <h3>Pagamento via PIX</h3>
+          </div>
+          <div class="pix-content">
+            <div class="qr-code-container">
+              <img id="qrcode" alt="QR Code PIX">
+              <p class="qr-instruction">Escaneie o QR Code com seu aplicativo bancário</p>
+            </div>
+            <div class="pix-code-section">
+              <p class="pix-code-label">Ou copie o código PIX:</p>
+              <div class="pix-code-box">
+                <textarea id="pixCode" readonly placeholder="Código PIX será gerado..."></textarea>
+                <button type="button" class="btn-copy-pix" onclick="copiarPixCode()">
+                  <i class="fas fa-copy"></i> Copiar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Adicionar Mensalidade -->
+  <div id="modal-adicionar" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Adicionar Mensalidade</h2>
+        <button class="modal-close" onclick="fecharModalAdicionar()">&times;</button>
+      </div>
+
+      <form id="form-adicionar-mensalidade" class="form-adicionar">
+        <div class="form-group">
+          <label for="titulo-mensalidade">Título da Mensalidade</label>
+          <input type="text" id="titulo-mensalidade" placeholder="Ex: Mensalidade Janeiro 2026" required>
+        </div>
+
+        <div class="form-group">
+          <label for="valor-mensalidade">Valor (R$)</label>
+          <input type="number" id="valor-mensalidade" step="0.01" placeholder="0.00" required>
+        </div>
+
+        <div class="form-group">
+          <label for="vencimento-mensalidade">Data de Vencimento</label>
+          <input type="date" id="vencimento-mensalidade" required>
+        </div>
+
+        <div class="form-group">
+          <label for="descricao-mensalidade">Descrição (opcional)</label>
+          <textarea id="descricao-mensalidade" placeholder="Detalhes da mensalidade..." rows="3"></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" onclick="fecharModalAdicionar()">Cancelar</button>
+          <button type="submit" class="btn-primary">
+            <i class="fas fa-save"></i> Salvar Mensalidade
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <p>&copy; 2026 - Fluxo de Caixa</p>
+  </footer>
+
+  <script type="module" src="../js/script-mensalidade.js"></script>
+
+</body>
+
+</html>

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transações - Fluxo de Caixa</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+
+<body>
+  <script type="module" src="../js/script-transacoes.js"></script>
+  <!-- Header -->
+  <header class="navbar">
+    <div class="navbar-container">
+      <div class="navbar-brand">
+        <i class="fas fa-cash-register"></i>
+        <span>Fluxo de Caixa</span>
+      </div>
+      <div class="navbar-menu">
+        <a href="caixa.html" class="nav-link">
+          <i class="fas fa-home"></i> Início
+        </a>
+        <a href="transacoes.html" class="nav-link active">
+          <i class="fas fa-list"></i> Transações
+        </a>
+        <a href="estoque.html" class="nav-link">
+          <i class="fas fa-boxes"></i> Estoque
+        </a>
+        <a href="mensalidade.html" class="nav-link">
+          <i class="fas fa-file-invoice-dollar"></i> Mensalidade
+        </a>
+      </div>
+      <button id="logout-btn" class="logout-btn">
+        <i class="fas fa-sign-out-alt"></i> Sair
+      </button>
+    </div>
+  </header>
+
+  <div class="main-container">
+    <div class="container">
+      <!-- Seção de Saldo -->
+      <div class="saldo-section">
+        <div class="saldo-card">
+          <div class="saldo-icon">
+            <i class="fas fa-wallet"></i>
+          </div>
+          <div class="saldo-content">
+            <p class="saldo-label">Saldo Total</p>
+            <h2 id="saldo" class="saldo-valor">R$ 0,00</h2>
+          </div>
+        </div>
+      </div>
+      <!-- Seção de Filtro -->
+      <section class="filter-section">
+        <div class="filter-group">
+          <label for="filtro-mes">
+            <i class="fas fa-filter"></i> Filtrar por mês:
+          </label>
+          <input type="month" id="filtro-mes">
+        </div>
+
+        <!-- Botões de Exportação -->
+        <div class="export-buttons">
+          <button id="export-pdf" class="btn-export btn-pdf">
+            <i class="fas fa-file-pdf"></i> PDF
+          </button>
+          <button id="export-excel" class="btn-export btn-excel">
+            <i class="fas fa-file-excel"></i> Excel
+          </button>
+        </div>
+      </section>
+
+      <!-- Seção de Transações -->
+      <section class="transactions-section">
+        <h3 class="section-title">
+          <i class="fas fa-list"></i> Histórico de Transações
+        </h3>
+        <div id="lista-transacoes" class="lista-transacoes"></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <p>&copy; 2026 - Fluxo de Caixa</p>
+  </footer>
+
+  <!-- Lib para PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+</body>
+
+</html>
