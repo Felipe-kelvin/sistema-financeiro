@@ -20,13 +20,7 @@ import {
   where,
   Timestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-/* 🔥 SUA CONFIG FIREBASE */
-const firebaseConfig = {
-  apiKey: "AIzaSyCdok04xMPLJQ4FUhM9b6LFfSZyWDPeEoQ",
-  authDomain: "sistema-caixa-efe6e.firebaseapp.com",
-  projectId: "sistema-caixa-efe6e"
-};
+import { firebaseConfig } from "./config.js";
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
