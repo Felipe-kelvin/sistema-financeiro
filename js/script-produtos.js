@@ -81,7 +81,7 @@ logoutBtn.addEventListener("click", async () => {
 function carregarProdutos() {
   if (!userUID) return;
 
-  const q = query(collection(db, "estoque"), where("userId", "==", userUID));
+  const q = query(collection(db, "produtos"), where("userId", "==", userUID));
 
   onSnapshot(q, (snapshot) => {
     produtos = {};
@@ -149,7 +149,7 @@ formProduto.addEventListener("submit", async (e) => {
   }
 
   try {
-    await addDoc(collection(db, "estoque"), {
+    await addDoc(collection(db, "produtos"), {
       userId: userUID,
       nome,
       quantidade: 0,
@@ -254,7 +254,7 @@ async function editarProduto(produtoId) {
     e.preventDefault();
 
     try {
-      await updateDoc(doc(db, "estoque", produtoId), {
+      await updateDoc(doc(db, "produtos", produtoId), {
         nome: novoForm.querySelector("#nome-produto").value.trim(),
         atualizadoEm: Timestamp.now()
       });
@@ -282,7 +282,7 @@ async function handleFormProduto(e) {
   }
 
   try {
-    await addDoc(collection(db, "estoque"), {
+    await addDoc(collection(db, "produtos"), {
       userId: userUID,
       nome,
       quantidade,
@@ -307,7 +307,7 @@ async function deletarProduto(produtoId) {
   }
 
   try {
-    await deleteDoc(doc(db, "estoque", produtoId));
+    await deleteDoc(doc(db, "produtos", produtoId));
     alert("Produto deletado com sucesso!");
   } catch (erro) {
     alert("Erro ao deletar produto: " + erro.message);
