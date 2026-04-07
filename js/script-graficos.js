@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, doc, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { firebaseConfig } from "./config.js";
 
 const app = initializeApp(firebaseConfig);
@@ -12,13 +12,18 @@ document.body.style.display = "none";
 const totalEntradasEl = document.getElementById("total-entradas");
 const totalSaidasEl = document.getElementById("total-saidas");
 const totalSaldoEl = document.getElementById("total-saldo");
+const totalProdutosVendidosEl = document.getElementById("total-produtos-vendidos");
+const totalCustosVendasEl = document.getElementById("total-custos-vendas");
+const totalLucroVendasEl = document.getElementById("total-lucro-vendas");
 const ctxEntradasSaidas = document.getElementById("chart-entradas-saidas");
+const ctxVendasProdutos = document.getElementById("chart-vendas-produtos");
 const ctxSaldoMensal = document.getElementById("chart-saldo-mensal");
 const errorMessageEl = document.getElementById("graficos-error");
 const logoutBtn = document.getElementById("logout-btn");
 
 let userUID = null;
 let chartEntradasSaidas = null;
+let chartVendasProdutos = null;
 let chartSaldoMensal = null;
 
 onAuthStateChanged(auth, (user) => {
@@ -36,6 +41,7 @@ onAuthStateChanged(auth, (user) => {
   }
 
   escutarTransacoes();
+  escutarVendas();
 });
 
 logoutBtn.addEventListener("click", async () => {
@@ -87,12 +93,61 @@ function escutarTransacoes() {
   });
 }
 
+function escutarVendas() {
+  const vendasQuery = query(collection(db, "vendas"), where("userId", "==", userUID));
+
+  onSnapshot(vendasQuery, (snapshot) => {
+    if (typeof Chart === "undefined") {
+      mostrarErroChart("O Chart.js não foi carregado. Verifique sua conexão ou tente recarregar a página.");
+      return;
+    }
+
+    const dadosVendasPorMes = {};
+    let totalProdutosVendidos = 0;
+    let totalCustos = 0;
+    let totalLucro = 0;
+
+    snapshot.forEach((docSnap) => {
+      const venda = docSnap.data();
+      const mes = formatarMesData(venda.dataVenda);
+      const quantidade = Number(venda.quantidade) || 0;
+      const custoTotal = Number(venda.custoTotal) || 0;
+      const lucro = Number(venda.lucro) || 0;
+
+      totalProdutosVendidos += quantidade;
+      totalCustos += custoTotal;
+      totalLucro += lucro;
+
+      if (!dadosVendasPorMes[mes]) {
+        dadosVendasPorMes[mes] = {
+          quantidade: 0,
+          custos: 0,
+          lucro: 0
+        };
+      }
+
+      dadosVendasPorMes[mes].quantidade += quantidade;
+      dadosVendasPorMes[mes].custos += custoTotal;
+      dadosVendasPorMes[mes].lucro += lucro;
+    });
+
+    atualizarResumoVendas(totalProdutosVendidos, totalCustos, totalLucro);
+    atualizarGraficoVendas(dadosVendasPorMes);
+  });
+}
+
 function atualizarResumo(entradas, saidas) {
   const saldo = entradas - saidas;
 
   totalEntradasEl.textContent = formatarMoeda(entradas);
   totalSaidasEl.textContent = formatarMoeda(saidas);
   totalSaldoEl.textContent = formatarMoeda(saldo);
+}
+
+function atualizarResumoVendas(produtosVendidos, custos, lucro) {
+  totalProdutosVendidosEl.textContent = produtosVendidos;
+  totalCustosVendasEl.textContent = formatarMoeda(custos);
+  totalLucroVendasEl.textContent = formatarMoeda(lucro);
 }
 
 function atualizarGraficos(dadosPorMes) {
@@ -109,6 +164,10 @@ function atualizarGraficos(dadosPorMes) {
 
   if (chartEntradasSaidas) {
     chartEntradasSaidas.destroy();
+  }
+
+  if (chartVendasProdutos) {
+    chartVendasProdutos.destroy();
   }
 
   if (chartSaldoMensal) {
@@ -137,6 +196,7 @@ function atualizarGraficos(dadosPorMes) {
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
         interaction: {
           mode: "index",
           intersect: false,
@@ -165,7 +225,8 @@ function atualizarGraficos(dadosPorMes) {
             }
           }
         }
-      }
+      },
+      plugins: [valueLabelPlugin]
     });
   } catch (erro) {
     mostrarErroChart("Não foi possível inicializar o gráfico de entradas e saídas. " + erro.message);
@@ -188,6 +249,7 @@ function atualizarGraficos(dadosPorMes) {
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
         scales: {
           x: {
             grid: {
@@ -211,11 +273,154 @@ function atualizarGraficos(dadosPorMes) {
             }
           }
         }
-      }
+      },
+      plugins: [valueLabelPlugin]
     });
   } catch (erro) {
     mostrarErroChart("Não foi possível inicializar o gráfico de saldo. " + erro.message);
     return;
+  }
+}
+
+const valueLabelPlugin = {
+  id: "valueLabelPlugin",
+  afterDatasetsDraw(chart) {
+    const ctx = chart.ctx;
+    chart.data.datasets.forEach((dataset, datasetIndex) => {
+      const meta = chart.getDatasetMeta(datasetIndex);
+      meta.data.forEach((element, index) => {
+        const dataValue = dataset.data[index];
+        if (dataValue === null || dataValue === undefined || dataValue === 0) return;
+
+        const position = element.tooltipPosition();
+        const barHeight = element.height || 0;
+        const barWidth = element.width || 0;
+
+        // Para barras verticais, posiciona no centro vertical
+        // Para barras horizontais ou outros tipos, ajusta conforme necessário
+        let yPosition = position.y;
+        if (barHeight > 0) {
+          yPosition = position.y + (barHeight / 2);
+        }
+
+        ctx.save();
+        ctx.fillStyle = "#ffffff"; // Texto branco para contraste
+        ctx.font = "bold 11px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+
+        const label = dataset.yAxisID === "y" || dataset.yAxisID === "y1" ? formatarMoeda(dataValue) : String(dataValue);
+        ctx.fillText(label, position.x, yPosition);
+        ctx.restore();
+      });
+    });
+  }
+};
+
+function atualizarGraficoVendas(dadosVendasPorMes) {
+  if (typeof Chart === "undefined") {
+    mostrarErroChart("O Chart.js não foi carregado. Verifique sua conexão ou tente recarregar a página.");
+    return;
+  }
+
+  const mesesOrdenados = Object.keys(dadosVendasPorMes).sort();
+  const labels = mesesOrdenados.map(formatarMesLabel);
+  const valoresQuantidade = mesesOrdenados.map((mes) => dadosVendasPorMes[mes].quantidade);
+  const valoresCustos = mesesOrdenados.map((mes) => dadosVendasPorMes[mes].custos);
+  const valoresLucro = mesesOrdenados.map((mes) => dadosVendasPorMes[mes].lucro);
+
+  if (chartVendasProdutos) {
+    chartVendasProdutos.destroy();
+  }
+
+  try {
+    chartVendasProdutos = new Chart(ctxVendasProdutos, {
+      data: {
+        labels,
+        datasets: [
+          {
+            type: "bar",
+            label: "Produtos vendidos",
+            data: valoresQuantidade,
+            backgroundColor: "#0ea5e9",
+            yAxisID: "y1",
+            borderRadius: 6,
+            borderWidth: 1,
+          },
+          {
+            type: "bar",
+            label: "Custos",
+            data: valoresCustos,
+            backgroundColor: "#f97316",
+            yAxisID: "y",
+            borderRadius: 6,
+            borderWidth: 1,
+          },
+          {
+            type: "bar",
+            label: "Lucro",
+            data: valoresLucro,
+            backgroundColor: "#16a34a",
+            yAxisID: "y",
+            borderRadius: 6,
+            borderWidth: 1,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: "index",
+          intersect: false,
+        },
+        scales: {
+          x: {
+            stacked: false,
+            grid: {
+              display: false
+            }
+          },
+          y: {
+            type: "linear",
+            position: "left",
+            beginAtZero: true,
+            ticks: {
+              callback: (value) => formatarMoeda(value)
+            }
+          },
+          y1: {
+            type: "linear",
+            position: "right",
+            beginAtZero: true,
+            grid: {
+              drawOnChartArea: false
+            },
+            ticks: {
+              callback: (value) => value
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            position: "bottom"
+          },
+          tooltip: {
+            callbacks: {
+              label: (context) => {
+                if (context.dataset.yAxisID === "y") {
+                  return `${context.dataset.label}: ${formatarMoeda(context.parsed.y)}`;
+                }
+                return `${context.dataset.label}: ${context.parsed.y}`;
+              }
+            }
+          }
+        }
+      },
+      plugins: [valueLabelPlugin]
+    });
+  } catch (erro) {
+    mostrarErroChart("Não foi possível inicializar o gráfico de vendas de produtos. " + erro.message);
   }
 }
 

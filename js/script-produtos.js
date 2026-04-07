@@ -49,6 +49,9 @@ const modalVenda = document.getElementById("modal-venda");
 const modalProdutoNome = document.getElementById("modal-produto-nome");
 const modalQtdVendida = document.getElementById("modal-qtd-vendida");
 const modalTotalVendaInput = document.getElementById("modal-total-venda-input");
+const modalCustoProdutoInput = document.getElementById("modal-custo-produto-input");
+const modalCustoTotal = document.getElementById("modal-custo-total");
+const modalLucro = document.getElementById("modal-lucro");
 const modalPrecoUnit = document.getElementById("modal-preco-unit");
 const fecharModalBtn = document.getElementById("fechar-modal");
 const cancelarVendaBtn = document.getElementById("cancelar-venda");
@@ -57,6 +60,7 @@ const confirmarVendaBtn = document.getElementById("confirmar-venda");
 let userUID = null;
 let produtos = {};
 let produtoAtualSelecionado = null;
+let produtoEditandoId = null;
 
 onAuthStateChanged(auth, (user) => {
   if (!user) {
@@ -138,10 +142,13 @@ function atualizarStats() {
   valorTotalEl.textContent = formatarMoeda(valorTotal);
 }
 
-formProduto.addEventListener("submit", async (e) => {
+formProduto.addEventListener("submit", salvarProduto);
+
+async function salvarProduto(e) {
   e.preventDefault();
 
   const nome = nomeProdutoInput.value.trim();
+  const btnSubmit = formProduto.querySelector('button[type="submit"]');
 
   if (!nome) {
     alert("Digite o nome do produto!");
@@ -149,20 +156,34 @@ formProduto.addEventListener("submit", async (e) => {
   }
 
   try {
-    await addDoc(collection(db, "produtos"), {
-      userId: userUID,
-      nome,
-      quantidade: 0,
-      preco: 0,
-      categoria: "",
-      criadoEm: Timestamp.now(),
-      atualizadoEm: Timestamp.now()
-    });
+    if (produtoEditandoId) {
+      await updateDoc(doc(db, "produtos", produtoEditandoId), {
+        nome,
+        atualizadoEm: Timestamp.now()
+      });
 
+      produtoEditandoId = null;
+      btnSubmit.innerHTML = '<i class="fas fa-save"></i> Cadastrar Produto';
+      alert("Produto atualizado com sucesso!");
+    } else {
+      await addDoc(collection(db, "produtos"), {
+        userId: userUID,
+        nome,
+        quantidade: 0,
+        preco: 0,
+        categoria: "",
+        criadoEm: Timestamp.now(),
+        atualizadoEm: Timestamp.now()
+      });
+      alert("Produto cadastrado com sucesso!");
+    }
+
+    formProduto.reset();
   } catch (erro) {
-    alert("Erro ao cadastrar produto: " + erro.message);
+    alert("Erro ao salvar produto: " + erro.message);
   }
-});
+}
+
 
 function abrirModalVenda(produtoId) {
   produtoAtualSelecionado = produtos[produtoId];
@@ -175,6 +196,9 @@ function abrirModalVenda(produtoId) {
   modalProdutoNome.textContent = escaparHTML(produtoAtualSelecionado.nome);
   modalQtdVendida.value = 1;
   modalTotalVendaInput.value = "";
+  modalCustoProdutoInput.value = "";
+  modalCustoTotal.textContent = "R$ 0,00";
+  modalLucro.textContent = "R$ 0,00";
   modalPrecoUnit.textContent = "R$ 0,00";
   modalVenda.style.display = "flex";
   modalQtdVendida.focus();
@@ -184,50 +208,79 @@ fecharModalBtn.addEventListener("click", () => { modalVenda.style.display = "non
 cancelarVendaBtn.addEventListener("click", () => { modalVenda.style.display = "none"; produtoAtualSelecionado = null; });
 modalVenda.addEventListener("click", (e) => { if (e.target === modalVenda) { modalVenda.style.display = "none"; produtoAtualSelecionado = null; }});
 
-function atualizarPrecoUnitario() {
+function atualizarResumoVenda() {
   const qtd = parseInt(modalQtdVendida.value) || 0;
   const total = parseFloat(modalTotalVendaInput.value) || 0;
+  const custoTotal = parseFloat(modalCustoProdutoInput.value) || 0;
+  const precoUnit = qtd > 0 ? total / qtd : 0;
+  const lucro = total - custoTotal;
 
-  if (qtd > 0 && total > 0) {
-    modalPrecoUnit.textContent = formatarMoeda(total / qtd);
-  } else {
-    modalPrecoUnit.textContent = "R$ 0,00";
-  }
+  modalPrecoUnit.textContent = precoUnit > 0 ? formatarMoeda(precoUnit) : "R$ 0,00";
+  modalCustoTotal.textContent = formatarMoeda(custoTotal);
+  modalLucro.textContent = formatarMoeda(lucro);
 }
 
-modalQtdVendida.addEventListener("input", atualizarPrecoUnitario);
-modalTotalVendaInput.addEventListener("input", atualizarPrecoUnitario);
+modalQtdVendida.addEventListener("input", atualizarResumoVenda);
+modalTotalVendaInput.addEventListener("input", atualizarResumoVenda);
+modalCustoProdutoInput.addEventListener("input", atualizarResumoVenda);
 
 confirmarVendaBtn.addEventListener("click", async () => {
   if (!produtoAtualSelecionado) return;
 
   const qtdVendida = parseInt(modalQtdVendida.value) || 0;
   const totalVenda = parseFloat(modalTotalVendaInput.value) || 0;
+  const custoTotal = parseFloat(modalCustoProdutoInput.value) || 0;
 
   if (qtdVendida <= 0) { alert("Quantidade deve ser maior que 0!"); return; }
   if (totalVenda <= 0) { alert("Informe um valor total válido para a venda!"); return; }
+  if (custoTotal < 0) { alert("Informe um valor de custo válido para a venda!"); return; }
 
   try {
     const agora = new Date();
     const mesAtual = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}`;
+    const lucro = totalVenda - custoTotal;
 
-    // Registrar a venda em vendas (sem alterar estoque automático)
     await addDoc(collection(db, "vendas"), {
       userId: userUID,
       produtoId: produtoAtualSelecionado.id,
       produtoNome: produtoAtualSelecionado.nome,
       quantidade: qtdVendida,
       precoUnitario: totalVenda / qtdVendida,
+      custoTotal,
+      lucro,
       total: totalVenda,
       dataVenda: Timestamp.now()
     });
 
     await addDoc(collection(db, "transacoes", userUID, "lista"), {
-      descricao: `Venda de ${produtoAtualSelecionado.nome} (${qtdVendida} un.)`,
-      valor: totalVenda,
-      tipo: "entrada",
+      descricao: `Custo de ${produtoAtualSelecionado.nome} (${qtdVendida} un.)`,
+      valor: custoTotal,
+      tipo: "saida",
       mes: mesAtual
     });
+
+    if (lucro > 0) {
+      await addDoc(collection(db, "transacoes", userUID, "lista"), {
+        descricao: `Lucro de ${produtoAtualSelecionado.nome} (${qtdVendida} un.)`,
+        valor: lucro,
+        tipo: "entrada",
+        mes: mesAtual
+      });
+    } else if (lucro === 0) {
+      await addDoc(collection(db, "transacoes", userUID, "lista"), {
+        descricao: `Venda de ${produtoAtualSelecionado.nome} (${qtdVendida} un.)`,
+        valor: totalVenda,
+        tipo: "entrada",
+        mes: mesAtual
+      });
+    } else {
+      await addDoc(collection(db, "transacoes", userUID, "lista"), {
+        descricao: `Venda com prejuízo de ${produtoAtualSelecionado.nome} (${qtdVendida} un.)`,
+        valor: Math.abs(lucro),
+        tipo: "saida",
+        mes: mesAtual
+      });
+    }
 
     modalVenda.style.display = "none";
     produtoAtualSelecionado = null;
@@ -242,60 +295,10 @@ async function editarProduto(produtoId) {
   if (!produto) return;
 
   nomeProdutoInput.value = produto.nome;
+  produtoEditandoId = produtoId;
 
   const btnSubmit = formProduto.querySelector('button[type="submit"]');
-  const originalText = btnSubmit.innerHTML;
   btnSubmit.innerHTML = '<i class="fas fa-sync"></i> Atualizar Produto';
-
-  const novoForm = formProduto.cloneNode(true);
-  formProduto.parentNode.replaceChild(novoForm, formProduto);
-
-  novoForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-    try {
-      await updateDoc(doc(db, "produtos", produtoId), {
-        nome: novoForm.querySelector("#nome-produto").value.trim(),
-        atualizadoEm: Timestamp.now()
-      });
-
-      novoForm.reset();
-      novoForm.querySelector('button[type="submit"]').innerHTML = originalText;
-      alert("Produto atualizado com sucesso!");
-      formProduto = novoForm;
-      formProduto.addEventListener("submit", handleFormProduto);
-    } catch (erro) {
-      alert("Erro ao atualizar produto: " + erro.message);
-    }
-  });
-
-  novoForm.id = "form-produto";
-}
-
-async function handleFormProduto(e) {
-  e.preventDefault();
-  const nome = nomeProdutoInput.value.trim();
-
-  if (!nome) {
-    alert("Digite o nome do produto!");
-    return;
-  }
-
-  try {
-    await addDoc(collection(db, "produtos"), {
-      userId: userUID,
-      nome,
-      quantidade,
-      preco,
-      categoria,
-      criadoEm: Timestamp.now(),
-      atualizadoEm: Timestamp.now()
-    });
-    formProduto.reset();
-    alert("Produto cadastrado com sucesso!");
-  } catch (erro) {
-    alert("Erro ao cadastrar produto: " + erro.message);
-  }
 }
 
 async function deletarProduto(produtoId) {

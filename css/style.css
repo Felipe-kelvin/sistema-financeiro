@@ -241,6 +241,20 @@ body {
   color: var(--primary-color);
 }
 
+.chart-card {
+  background: var(--bg-light);
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.chart-card canvas {
+  width: 100% !important;
+  min-height: 400px !important;
+  display: block;
+}
+
 /* ========================================
    FORM STYLING
    ======================================== */
@@ -778,6 +792,15 @@ body {
     font-size: 0.9rem;
   }
 
+  /* GRÁFICOS RESPONSIVOS */
+  .chart-card {
+    padding: 1rem;
+  }
+
+  .chart-card canvas {
+    min-height: 300px !important;
+  }
+
   /* TABELAS RESPONSIVAS */
   .table-responsive {
     overflow-x: auto;
@@ -1149,6 +1172,16 @@ body {
   .filtro-input {
     padding: 0.5rem 0.6rem;
     font-size: 0.85rem;
+  }
+
+  /* GRÁFICOS CELULAR */
+  .chart-card {
+    padding: 0.75rem;
+  }
+
+  .chart-card canvas {
+    min-height: 250px !important;
+    max-height: 300px !important;
   }
 
   /* TABELAS CELULAR */

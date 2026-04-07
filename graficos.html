@@ -50,7 +50,7 @@
       <section class="section">
         <div class="section-header">
           <h2><i class="fas fa-chart-bar"></i> Painel de Gráficos</h2>
-          <p>Visualize o saldo, entrada e saída por mês.</p>
+          <p>Visualize o saldo, entradas e saídas por mês, além de métricas de vendas de produtos registradas em produtos.html.</p>
         </div>
 
         <div class="dashboard-cards">
@@ -68,6 +68,21 @@
           </div>
         </div>
 
+        <div class="dashboard-cards">
+          <div class="card card-summary">
+            <span class="card-title">Produtos vendidos</span>
+            <strong id="total-produtos-vendidos">0</strong>
+          </div>
+          <div class="card card-summary">
+            <span class="card-title">Custos de vendas</span>
+            <strong id="total-custos-vendas">R$ 0,00</strong>
+          </div>
+          <div class="card card-summary">
+            <span class="card-title">Lucro de vendas</span>
+            <strong id="total-lucro-vendas">R$ 0,00</strong>
+          </div>
+        </div>
+
         <div id="graficos-error" style="display:none; margin-top:24px; padding:16px; background:#fee2e2; color:#b91c1c; border:1px solid #fecaca; border-radius:8px;">
           <strong>Erro ao carregar os gráficos.</strong>
           <p>Não foi possível inicializar o Chart.js. Verifique sua conexão e recarregue a página.</p>
@@ -78,6 +93,13 @@
         <h3 class="section-title"><i class="fas fa-chart-column"></i> Entradas x Saídas</h3>
         <div class="chart-card">
           <canvas id="chart-entradas-saidas" aria-label="Gráfico de barras de entradas e saídas" role="img"></canvas>
+        </div>
+      </section>
+
+      <section class="section section-chart">
+        <h3 class="section-title"><i class="fas fa-boxes"></i> Vendas de Produtos</h3>
+        <div class="chart-card">
+          <canvas id="chart-vendas-produtos" aria-label="Gráfico de vendas de produtos" role="img"></canvas>
         </div>
       </section>
 
