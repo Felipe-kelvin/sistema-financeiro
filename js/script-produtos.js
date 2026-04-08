@@ -50,9 +50,9 @@ const modalProdutoNome = document.getElementById("modal-produto-nome");
 const modalQtdVendida = document.getElementById("modal-qtd-vendida");
 const modalTotalVendaInput = document.getElementById("modal-total-venda-input");
 const modalCustoProdutoInput = document.getElementById("modal-custo-produto-input");
+const modalPrecoUnit = document.getElementById("modal-preco-unit");
 const modalCustoTotal = document.getElementById("modal-custo-total");
 const modalLucro = document.getElementById("modal-lucro");
-const modalPrecoUnit = document.getElementById("modal-preco-unit");
 const fecharModalBtn = document.getElementById("fechar-modal");
 const cancelarVendaBtn = document.getElementById("cancelar-venda");
 const confirmarVendaBtn = document.getElementById("confirmar-venda");
@@ -123,9 +123,9 @@ function renderizarProdutos() {
       <td><strong>${formatarMoeda(p.quantidade * p.preco)}</strong></td>
       <td>
         <div class="btn-group-small">
-          <button class="btn btn-sm btn-success" onclick="abrirModalVenda('${p.id}')"><i class="fas fa-sell"></i>Registrar Venda</button>
-          <button class="btn btn-sm btn-primary" onclick="editarProduto('${p.id}')"><i class="fas fa-edit"></i> Editar</button>
-          <button class="btn btn-sm btn-danger" onclick="deletarProduto('${p.id}')"><i class="fas fa-trash"></i> Deletar</button>
+          <button class="btn btn-sm btn-success" onclick="window.abrirModalVenda('${p.id}')"><i class="fas fa-sell"></i>Registrar Venda</button>
+          <button class="btn btn-sm btn-primary" onclick="window.editarProduto('${p.id}')"><i class="fas fa-edit"></i> Editar</button>
+          <button class="btn btn-sm btn-danger" onclick="window.deletarProduto('${p.id}')"><i class="fas fa-trash"></i> Deletar</button>
         </div>
       </td>
     </tr>
@@ -197,32 +197,36 @@ function abrirModalVenda(produtoId) {
   modalQtdVendida.value = 1;
   modalTotalVendaInput.value = "";
   modalCustoProdutoInput.value = "";
+  modalPrecoUnit.textContent = "R$ 0,00";
   modalCustoTotal.textContent = "R$ 0,00";
   modalLucro.textContent = "R$ 0,00";
-  modalPrecoUnit.textContent = "R$ 0,00";
   modalVenda.style.display = "flex";
   modalQtdVendida.focus();
+}
+
+function atualizarPrevia() {
+  const qtd = parseInt(modalQtdVendida.value) || 0;
+  const total = parseFloat(modalTotalVendaInput.value) || 0;
+  const custo = parseFloat(modalCustoProdutoInput.value) || 0;
+
+  if (qtd > 0 && total > 0) {
+    modalPrecoUnit.textContent = formatarMoeda(total / qtd);
+  } else {
+    modalPrecoUnit.textContent = "R$ 0,00";
+  }
+
+  modalCustoTotal.textContent = formatarMoeda(custo);
+  const lucro = total - custo;
+  modalLucro.textContent = formatarMoeda(lucro);
 }
 
 fecharModalBtn.addEventListener("click", () => { modalVenda.style.display = "none"; produtoAtualSelecionado = null; });
 cancelarVendaBtn.addEventListener("click", () => { modalVenda.style.display = "none"; produtoAtualSelecionado = null; });
 modalVenda.addEventListener("click", (e) => { if (e.target === modalVenda) { modalVenda.style.display = "none"; produtoAtualSelecionado = null; }});
 
-function atualizarResumoVenda() {
-  const qtd = parseInt(modalQtdVendida.value) || 0;
-  const total = parseFloat(modalTotalVendaInput.value) || 0;
-  const custoTotal = parseFloat(modalCustoProdutoInput.value) || 0;
-  const precoUnit = qtd > 0 ? total / qtd : 0;
-  const lucro = total - custoTotal;
-
-  modalPrecoUnit.textContent = precoUnit > 0 ? formatarMoeda(precoUnit) : "R$ 0,00";
-  modalCustoTotal.textContent = formatarMoeda(custoTotal);
-  modalLucro.textContent = formatarMoeda(lucro);
-}
-
-modalQtdVendida.addEventListener("input", atualizarResumoVenda);
-modalTotalVendaInput.addEventListener("input", atualizarResumoVenda);
-modalCustoProdutoInput.addEventListener("input", atualizarResumoVenda);
+modalQtdVendida.addEventListener("input", atualizarPrevia);
+modalTotalVendaInput.addEventListener("input", atualizarPrevia);
+modalCustoProdutoInput.addEventListener("input", atualizarPrevia);
 
 confirmarVendaBtn.addEventListener("click", async () => {
   if (!produtoAtualSelecionado) return;
@@ -259,28 +263,12 @@ confirmarVendaBtn.addEventListener("click", async () => {
       mes: mesAtual
     });
 
-    if (lucro > 0) {
-      await addDoc(collection(db, "transacoes", userUID, "lista"), {
-        descricao: `Lucro de ${produtoAtualSelecionado.nome} (${qtdVendida} un.)`,
-        valor: lucro,
-        tipo: "entrada",
-        mes: mesAtual
-      });
-    } else if (lucro === 0) {
-      await addDoc(collection(db, "transacoes", userUID, "lista"), {
-        descricao: `Venda de ${produtoAtualSelecionado.nome} (${qtdVendida} un.)`,
-        valor: totalVenda,
-        tipo: "entrada",
-        mes: mesAtual
-      });
-    } else {
-      await addDoc(collection(db, "transacoes", userUID, "lista"), {
-        descricao: `Venda com prejuízo de ${produtoAtualSelecionado.nome} (${qtdVendida} un.)`,
-        valor: Math.abs(lucro),
-        tipo: "saida",
-        mes: mesAtual
-      });
-    }
+    await addDoc(collection(db, "transacoes", userUID, "lista"), {
+      descricao: `Venda de ${produtoAtualSelecionado.nome} (${qtdVendida} un.)`,
+      valor: totalVenda,
+      tipo: "entrada",
+      mes: mesAtual
+    });
 
     modalVenda.style.display = "none";
     produtoAtualSelecionado = null;
