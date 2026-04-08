@@ -592,7 +592,7 @@
 
         } catch (err) {
           // Log apenas o código do erro para depuração, sem detalhes sensíveis
-          console.warn("Falha no login:", err.code);
+          //console.warn("Falha no login:", err.code);
           let mensagemErro = "Ocorreu um erro inesperado. Tente novamente.";
 
           if (err.code === "auth/user-not-found") {

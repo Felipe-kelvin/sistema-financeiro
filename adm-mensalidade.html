@@ -240,6 +240,14 @@
           <textarea id="descricao-mensalidade" placeholder="Detalhes da mensalidade..." rows="3"></textarea>
         </div>
 
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="aplicar-para-todos">
+            Adicionar esta mensalidade para todos os usuários cadastrados
+          </label>
+          <small style="color: #6b7280;">Quando marcar, a mesma mensalidade será criada no subcollection <code>users/{uid}/mensalidades</code> de cada usuário que já tem documento em <code>users</code>.</small>
+        </div>
+
         <div class="form-actions">
           <button type="button" class="btn-secondary" onclick="fecharModalAdicionar()">Cancelar</button>
           <button type="submit" class="btn-primary">
@@ -268,6 +276,7 @@ import {
   query,
   where,
   onSnapshot,
+  getDocs,
   getDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -678,21 +687,50 @@ formAdicionarMensalidade.addEventListener("submit", async (e) => {
     return;
   }
 
+  const aplicarParaTodos = document.getElementById("aplicar-para-todos").checked;
+
   try {
     console.log("💾 Salvando nova mensalidade...");
-    
-    await addDoc(collection(db, `users/${userUID}/mensalidades`), {
-      titulo: titulo,
-      valor: valor,
-      vencimento: new Date(vencimento),
-      descricao: descricao || "",
-      status: "pendente",
-      createdAt: new Date(),
-      updatedAt: new Date()
-    });
 
-    console.log("✅ Mensalidade salva com sucesso!");
-    alert("✅ Mensalidade adicionada com sucesso!");
+    if (aplicarParaTodos) {
+      const usuariosSnapshot = await getDocs(collection(db, "users"));
+      const usuarios = usuariosSnapshot.docs;
+
+      if (usuarios.length === 0) {
+        alert("Nenhum usuário cadastrado para aplicar a mensalidade.");
+        return;
+      }
+
+      await Promise.all(usuarios.map((usuarioDoc) => {
+        return addDoc(collection(db, `users/${usuarioDoc.id}/mensalidades`), {
+          titulo: titulo,
+          valor: valor,
+          vencimento: new Date(vencimento),
+          descricao: descricao || "",
+          status: "pendente",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          criadoPor: userUID
+        });
+      }));
+
+      console.log("✅ Mensalidade salva para todos os usuários com sucesso!");
+      alert("✅ Mensalidade adicionada para todos os usuários com sucesso!");
+    } else {
+      await addDoc(collection(db, `users/${userUID}/mensalidades`), {
+        titulo: titulo,
+        valor: valor,
+        vencimento: new Date(vencimento),
+        descricao: descricao || "",
+        status: "pendente",
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+
+      console.log("✅ Mensalidade salva com sucesso!");
+      alert("✅ Mensalidade adicionada com sucesso!");
+    }
+
     fecharModalAdicionar();
   } catch (error) {
     console.error("❌ Erro ao salvar mensalidade:", error);
