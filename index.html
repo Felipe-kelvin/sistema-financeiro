@@ -212,7 +212,8 @@
        ======================================== */
 
     .erro {
-      display: none;
+      opacity: 0;
+      visibility: hidden;
       background: #fee2e2;
       border: 1px solid #fecaca;
       color: #dc2626;
@@ -227,7 +228,8 @@
     }
 
     .erro.show {
-      display: flex;
+      opacity: 1;
+      visibility: visible;
     }
 
     @keyframes fadeIn {
@@ -520,7 +522,7 @@
         <i class="fas fa-sign-in-alt"></i> Entrar
       </button>
 
-      <div class="erro" id="erro" style="display: none;">
+      <div class="erro" id="erro">
         <i class="fas fa-exclamation-circle"></i>
         <span></span>
       </div>
@@ -547,53 +549,83 @@
       onAuthStateChanged
     } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-    // Substitua com as novas chaves do Firebase após regenerar no console
-    const firebaseConfig = {
-      apiKey: "AIzaSyCdok04xMPLJQ4FUhM9b6LFfSZyWDPeEoQ",
-      authDomain: "sistema-caixa-efe6e.firebaseapp.com",
-      projectId: "sistema-caixa-efe6e",
-      storageBucket: "sistema-caixa-efe6e.appspot.com",
-      messagingSenderId: "203332128049",
-      appId: "1:203332128049:web:018082ef4705aa26e9b410"
-    };
+    try {
+      // Substitua com as novas chaves do Firebase após regenerar no console
+      const firebaseConfig = {
+        apiKey: "AIzaSyCdok04xMPLJQ4FUhM9b6LFfSZyWDPeEoQ",
+        authDomain: "sistema-caixa-efe6e.firebaseapp.com",
+        projectId: "sistema-caixa-efe6e",
+        storageBucket: "sistema-caixa-efe6e.appspot.com",
+        messagingSenderId: "203332128049",
+        appId: "1:203332128049:web:018082ef4705aa26e9b410"
+      };
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
 
-    const form = document.getElementById("loginForm");
-    const erro = document.getElementById("erro");
-    const button = form.querySelector("button");
+      const form = document.getElementById("loginForm");
+      const erro = document.getElementById("erro");
+      const button = form.querySelector("button");
 
-    /* ✅ se já estiver logado → pula login */
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        window.location.href = "caixa.html";
-      }
-    });
+      /* ✅ se já estiver logado → pula login */
+      onAuthStateChanged(auth, (user) => {
+        if (user) {
+          window.location.href = "caixa.html";
+        }
+      });
 
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
 
-      erro.classList.remove("show");
-      button.disabled = true;
-      button.classList.add("loading");
+        erro.classList.remove("show");
+        button.disabled = true;
+        button.classList.add("loading");
 
-      const email = document.getElementById("email").value;
-      const senha = document.getElementById("password").value;
+        const email = document.getElementById("email").value;
+        const senha = document.getElementById("password").value;
 
-      try {
-        // mantém login salvo
-        await setPersistence(auth, browserLocalPersistence);
-        await signInWithEmailAndPassword(auth, email, senha);
-        window.location.href = "caixa.html";
+        try {
+          // mantém login salvo
+          await setPersistence(auth, browserLocalPersistence);
+          await signInWithEmailAndPassword(auth, email, senha);
+          window.location.href = "caixa.html";
 
-      } catch (err) {
-        console.error(err);
-        erro.classList.add("show");
-        button.disabled = false;
-        button.classList.remove("loading");
-      }
-    });
+        } catch (err) {
+          // Log apenas o código do erro para depuração, sem detalhes sensíveis
+          console.warn("Falha no login:", err.code);
+          let mensagemErro = "Ocorreu um erro inesperado. Tente novamente.";
+
+          if (err.code === "auth/user-not-found") {
+            mensagemErro = "Usuário não encontrado. Verifique o e-mail digitado.";
+          } else if (err.code === "auth/wrong-password") {
+            mensagemErro = "Senha incorreta. Tente novamente.";
+          } else if (err.code === "auth/invalid-email") {
+            mensagemErro = "E-mail inválido. Verifique o formato.";
+          } else if (err.code === "auth/too-many-requests") {
+            mensagemErro = "Muitas tentativas. Tente novamente mais tarde.";
+          } else if (err.code === "auth/user-disabled") {
+            mensagemErro = "Esta conta foi desativada.";
+          }
+
+          erro.querySelector("span").textContent = mensagemErro;
+          erro.classList.add("show");
+          button.disabled = false;
+          button.classList.remove("loading");
+        }
+      });
+
+      // Limpar erro quando usuário começa a digitar
+      document.getElementById("email").addEventListener("input", () => {
+        erro.classList.remove("show");
+      });
+      document.getElementById("password").addEventListener("input", () => {
+        erro.classList.remove("show");
+      });
+
+    } catch (globalError) {
+      // Em produção, não logar erros detalhados
+      console.warn("Erro no script de login");
+    }
 
   </script>
 
