@@ -302,11 +302,20 @@ formPagamento.addEventListener("submit", async (e) => {
   if (metodoValue === "pix") {
 
   try {
+    // ✅ Obter token Firebase do usuário autenticado
+    const user = auth.currentUser;
+    if (!user) {
+      alert("Erro: usuário não autenticado");
+      return;
+    }
+
+    const token = await user.getIdToken();
 
     const response = await fetch('/api/criar-cobranca', {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
       },
       body: JSON.stringify({
         nome: "Cliente",
@@ -315,6 +324,11 @@ formPagamento.addEventListener("submit", async (e) => {
         valor: mensalidadeSelecionada.valor
       })
     });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`Erro na API: ${response.status} - ${errorData.error || 'Erro desconhecido'}`);
+    }
 
     const data = await response.json();
 
