@@ -2,6 +2,10 @@
   publish = "."
   functions = "api"
 
+[dev]
+  command = "npm run start"
+  targetPort = 1234
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"

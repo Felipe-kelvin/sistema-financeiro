@@ -48,7 +48,9 @@ onAuthStateChanged(auth, (user) => {
     return;
   }
 
-  //console.log("Usuário autenticado:", user.uid);
+  console.log("Firebase project:", app.options.projectId);
+  console.log("Usuário autenticado:", user.uid);
+  console.log("auth.currentUser:", auth.currentUser);
 
   userUID = user.uid;
 
@@ -109,8 +111,30 @@ form.addEventListener("submit", async (e) => {
   const tipo = document.getElementById("tipo").value;
   const mes = document.getElementById("mes").value;
 
-  if (!descricao || isNaN(valor) || valor <= 0 || !tipo) {
-    alert("Preencha todos os dados corretamente!");
+  if (!descricao || isNaN(valor) || valor <= 0 || !tipo || !mes) {
+    alert("Preencha todos os dados corretamente! Todos os campos são obrigatórios.");
+    return;
+  }
+
+  if (!userUID) {
+    console.error("Tentativa de criar transação sem UID de usuário autenticado.");
+    alert("Erro de autenticação: usuário não identificado.");
+    return;
+  }
+
+  console.log("Criando transação", {
+    userUID,
+    authCurrentUID: auth.currentUser?.uid,
+    authCurrentUser: auth.currentUser,
+    descricao,
+    valor,
+    tipo,
+    mes
+  });
+
+  if (!auth.currentUser) {
+    console.error("Nenhum usuário autenticado no Firebase Auth no momento do submit.");
+    alert("Erro de autenticação: usuário não está logado no Firebase.");
     return;
   }
 
@@ -119,7 +143,7 @@ form.addEventListener("submit", async (e) => {
       collection(db, "transacoes", userUID, "lista"),
       {
         descricao: escaparHTML(descricao),
-        valor, 
+        valor,
         tipo,
         mes
       }
@@ -131,7 +155,7 @@ form.addEventListener("submit", async (e) => {
 
   } catch (error) {
     console.error("Erro ao adicionar transação:", error);
-    alert("Erro ao adicionar transação. Tente novamente.");
+    alert(`Erro ao adicionar transação: ${error.code || error.message}`);
   }
 });
 

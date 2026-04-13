@@ -1,0 +1,24 @@
+{
+  "projects": {
+    "default": "sistema-caixa-efe6e"
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "hosting": {
+    "public": "dist",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "redirects": [
+      {
+        "source": "**",
+        "destination": "/index.html",
+        "type": 200
+      }
+    ]
+  }
+}

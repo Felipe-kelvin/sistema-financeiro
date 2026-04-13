@@ -1,0 +1,118 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Função para verificar autenticação
+    function isAuth() {
+      return request.auth.uid != null;
+    }
+
+    // Função para verificar propriedade do documento
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    // ==================== ESTOQUE ====================
+    // Coleção: estoque
+    // Uso: Armazenar produtos cadastrados por usuário
+    match /estoque/{document=**} {
+      // Permissão de leitura: apenas dados do próprio usuário
+      allow read: if isAuth() && resource.data.userId == request.auth.uid;
+
+      // Permissão de criação: apenas usuário autenticado (cria com seu UID)
+      allow create: if isAuth() && request.data.userId == request.auth.uid &&
+        request.data.nome is string && request.data.nome.size() > 0 &&
+        request.data.quantidade is number && request.data.quantidade >= 0 &&
+        request.data.preco is number && request.data.preco >= 0 &&
+        request.resource.size() <= 1000; // Limite de tamanho
+
+      // Permissão de atualização: apenas do próprio usuário
+      allow update: if isAuth() && isOwner(resource.data.userId) &&
+        request.data.userId == resource.data.userId && // userId não pode ser alterado
+        request.data.nome is string && request.data.nome.size() > 0 &&
+        request.data.quantidade is number && request.data.quantidade >= 0 &&
+        request.data.preco is number && request.data.preco >= 0;
+
+      // Permissão de deleção: apenas do próprio usuário
+      allow delete: if isAuth() && isOwner(resource.data.userId);
+    }
+
+    // ==================== VENDAS ====================
+    // Coleção: vendas
+    // Uso: Registrar histórico de vendas
+    match /vendas/{document=**} {
+      // Leitura: apenas dados do próprio usuário
+      allow read: if isAuth() && resource.data.userId == request.auth.uid;
+
+      // Criação: apenas usuário autenticado
+      allow create: if isAuth() && request.data.userId == request.auth.uid &&
+        request.data.produtoId is string && request.data.produtoId.size() > 0 &&
+        request.data.produtoNome is string && request.data.produtoNome.size() > 0 &&
+        request.data.quantidade is number && request.data.quantidade > 0 &&
+        request.data.precoUnitario is number && request.data.precoUnitario >= 0 &&
+        request.data.total is number && request.data.total > 0;
+
+      // Nenhuma atualização ou deleção de vendas (apenas leitura/criação)
+      allow update, delete: if false;
+    }
+
+    // ==================== TRANSAÇÕES ====================
+    // Coleção: transacoes/userId/lista
+    // Uso: Registrar entrada/saída de caixa por usuário
+    match /transacoes/{userId}/lista/{document=**} {
+      // Leitura: apenas dados do próprio usuário
+      allow read: if isAuth() && isOwner(userId);
+
+      // Criação: apenas do próprio usuário
+      allow create: if isAuth() && isOwner(userId) &&
+        request.resource.data.descricao is string &&
+        request.resource.data.valor is number &&
+        request.resource.data.tipo in ['entrada', 'saida'] &&
+        request.resource.data.mes is string;
+
+      // Atualização: usuário pode atualizar sua própria transação
+      allow update: if isAuth() && isOwner(userId) &&
+        request.resource.data.descricao is string &&
+        request.resource.data.valor is number &&
+        request.resource.data.tipo in ['entrada', 'saida'];
+
+      // Deleção: usuário pode deletar sua própria transação
+      allow delete: if isAuth() && isOwner(userId);
+    }
+
+    // ==================== MENSALIDADES ====================
+    // Coleção: users/userId/mensalidades
+    // Uso: Registrar mensalidades por usuário
+    match /users/{userId}/mensalidades/{document=**} {
+      allow read: if isAuth() && isOwner(userId);
+      allow create: if isAuth() && isOwner(userId) &&
+        request.resource.data.aluno is string && request.resource.data.aluno.size() > 0 &&
+        request.resource.data.valor is number && request.resource.data.valor > 0 &&
+        request.resource.data.status in ['pendente', 'pago', 'atrasado'];
+      allow update: if isAuth() && isOwner(userId);
+      allow delete: if isAuth() && isOwner(userId);
+    }
+
+    // ==================== PAGAMENTOS ====================
+    // Coleção: users/userId/pagamentos
+    // Uso: Registrar pagamentos de mensalidades
+    match /users/{userId}/pagamentos/{document=**} {
+      allow read: if isAuth() && isOwner(userId);
+      allow create: if isAuth() && isOwner(userId);
+      allow update: if isAuth() && isOwner(userId);
+      allow delete: if isAuth() && isOwner(userId);
+    }
+
+
+    // ==================== AUTH - Metadata de Usuário ====================
+    // Coleção: users (opcional, para armazenar dados de usuário)
+    match /users/{userId} {
+      allow read: if isAuth() && isOwner(userId);
+      allow write: if isAuth() && isOwner(userId);
+    }
+
+    // ==================== DENY ALL por padrão ====================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
