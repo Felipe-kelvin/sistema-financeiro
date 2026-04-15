@@ -339,6 +339,8 @@ let mensalidadeSelecionada = null;
 onAuthStateChanged(auth, (user) => {
   if (!user) {
     console.log("❌ Usuário não autenticado, redirecionando para login");
+    // Substituir entrada do histórico para evitar aviso do navegador
+    window.history.replaceState(null, '', '../index.html');
     window.location.href = "../index.html";
     return;
   }

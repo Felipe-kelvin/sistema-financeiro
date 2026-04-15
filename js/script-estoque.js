@@ -85,8 +85,8 @@ let produtoAtualSelecionado = null;
 
 // ================= AUTENTICAÇÃO =================
 onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    window.location.href = "../index.html";
+  if (!user) {    // Substituir entrada do histórico para evitar aviso do navegador
+    window.history.replaceState(null, '', '../index.html');    window.location.href = "../index.html";
     return;
   }
   

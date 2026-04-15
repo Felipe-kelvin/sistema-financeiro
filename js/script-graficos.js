@@ -28,6 +28,8 @@ let chartSaldoMensal = null;
 
 onAuthStateChanged(auth, (user) => {
   if (!user) {
+    // Substituir entrada do histórico para evitar aviso do navegador
+    window.history.replaceState(null, '', '../index.html');
     window.location.href = "../index.html";
     return;
   }
