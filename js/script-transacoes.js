@@ -55,7 +55,7 @@ onAuthStateChanged(auth, (user) => {
     return;
   }
 
-  console.log("Usuário autenticado:", user.uid);
+  //console.log("Usuário autenticado:", user.uid);
 
   userUID = user.uid;
 

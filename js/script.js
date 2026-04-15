@@ -48,9 +48,10 @@ onAuthStateChanged(auth, (user) => {
     return;
   }
 
-  console.log("Firebase project:", app.options.projectId);
-  console.log("Usuário autenticado:", user.uid);
-  console.log("auth.currentUser:", auth.currentUser);
+  // Logs de debug removidos por segurança
+  // console.log("Firebase project:", app.options.projectId);
+  // console.log("Usuário autenticado:", user.uid);
+  // console.log("auth.currentUser:", auth.currentUser);
 
   userUID = user.uid;
 
@@ -122,15 +123,8 @@ form.addEventListener("submit", async (e) => {
     return;
   }
 
-  console.log("Criando transação", {
-    userUID,
-    authCurrentUID: auth.currentUser?.uid,
-    authCurrentUser: auth.currentUser,
-    descricao,
-    valor,
-    tipo,
-    mes
-  });
+  // Log de debug removido por segurança
+  // console.log("Criando transação", { userUID, authCurrentUID: auth.currentUser?.uid, ... });
 
   if (!auth.currentUser) {
     console.error("Nenhum usuário autenticado no Firebase Auth no momento do submit.");

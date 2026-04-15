@@ -72,7 +72,8 @@ onAuthStateChanged(auth, (user) => {
     return;
   }
   userUID = user.uid;
-  console.log("✅ Usuário autenticado:", userUID);
+  // Log de debug removido por segurança
+  // console.log("✅ Usuário autenticado:", userUID);
   document.body.style.display = "flex";
   
   // Setar data de pagamento como hoje
@@ -116,23 +117,25 @@ window.addEventListener("click", (e) => {
 
 // ================= CARREGAR MENSALIDADES =================
 function carregarMensalidades() {
-  console.log("🔄 Carregando mensalidades para userUID:", userUID);
-  
+  // Log de debug removido por segurança
+  // console.log("🔄 Carregando mensalidades para userUID:", userUID);
+
   const q = query(
     collection(db, `users/${userUID}/mensalidades`)
   );
 
   onSnapshot(q, (snapshot) => {
     mensalidades = [];
-    console.log("📦 Snapshot recebido com", snapshot.docs.length, "documentos");
-    
+    // Logs de debug removidos por segurança
+    // console.log("📦 Snapshot recebido com", snapshot.docs.length, "documentos");
+
     snapshot.forEach((doc) => {
-      console.log("📄 Documento:", doc.id, doc.data());
+      // console.log("📄 Documento:", doc.id, doc.data());
       mensalidades.push({ ...doc.data(), id: doc.id });
     });
-    
-    console.log("✅ Total de mensalidades carregadas:", mensalidades.length);
-    
+
+    // console.log("✅ Total de mensalidades carregadas:", mensalidades.length);
+
     // Ordenar por vencimento
     mensalidades.sort((a, b) => {
       const dataA = new Date(a.vencimento || a.mes);
