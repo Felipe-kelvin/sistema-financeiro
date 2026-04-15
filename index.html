@@ -518,17 +518,19 @@
         >
       </div>
 
-      <button type="submit">
-        <i class="fas fa-sign-in-alt"></i> Entrar
-      </button>
-
       <div class="erro" id="erro">
         <i class="fas fa-exclamation-circle"></i>
         <span></span>
       </div>
-    </form>
+
+      <button type="submit">
+        <i class="fas fa-sign-in-alt"></i> Entrar
+      </button>
 
     <a href="cadastro.html">Criar Conta</a>
+
+    
+    </form>
 
     <!-- Footer -->
     <div class="login-footer">
@@ -593,7 +595,7 @@
         } catch (err) {
           // Log apenas o código do erro para depuração, sem detalhes sensíveis
           //console.warn("Falha no login:", err.code);
-          let mensagemErro = "Ocorreu um erro inesperado. Tente novamente.";
+          let mensagemErro = "Usuário ou senha incorretos. Tente novamente.";
 
           if (err.code === "auth/user-not-found") {
             mensagemErro = "Usuário não encontrado. Verifique o e-mail digitado.";
