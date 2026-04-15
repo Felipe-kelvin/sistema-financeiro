@@ -99,6 +99,10 @@ function calcularSaldo() {
     });
   }
 
+  if(saldo < 0){
+    saldoEl.style.color = "red";
+  }
+
   saldoEl.textContent = saldo.toLocaleString('pt-BR', {
     style: 'currency',
     currency: 'BRL'
