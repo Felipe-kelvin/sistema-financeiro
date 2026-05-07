@@ -1,12 +1,29 @@
 const axios = require("axios");
+const crypto = require("crypto");
 require("dotenv").config();
 const { verifyToken } = require("./auth");
 const validators = require("./validators");
 
-// Rate limiting simples (em memória - usar Redis em produção)
+// Rate limiting simples (em memória - usar Redis/Cache em produção)
 const rateLimitMap = new Map();
 const RATE_LIMIT_TIMEOUT = 60000; // 1 minuto
 const RATE_LIMIT_MAX = 10; // 10 requisições por minuto
+
+// Deteção de requisições duplicadas por corpo idêntico
+const duplicateRequestMap = new Map();
+const DUPLICATE_REQUEST_WINDOW = 120000; // 2 minutos
+
+// Monitoramento de eventos suspeitos para alertas
+const suspiciousMap = new Map();
+const SUSPICIOUS_WINDOW = 60000; // 1 minuto
+const SUSPICIOUS_THRESHOLD = 5;
+
+function getClientIdentifier(event, userId) {
+  const ip = event.headers['x-nf-client-connection-ip'] 
+    || event.headers['x-forwarded-for']?.split(',')[0]?.trim() 
+    || 'unknown';
+  return `${userId}:${ip}`;
+}
 
 function checkRateLimit(clientId) {
   const now = Date.now();
@@ -22,7 +39,56 @@ function checkRateLimit(clientId) {
   }
 
   clientData.count++;
+  rateLimitMap.set(clientId, clientData);
   return true;
+}
+
+function hashBody(body) {
+  return crypto.createHash('sha256').update(JSON.stringify(body)).digest('hex');
+}
+
+function markDuplicateRequest(clientId, bodyHash) {
+  const now = Date.now();
+  duplicateRequestMap.set(clientId, { hash: bodyHash, timestamp: now });
+}
+
+function isDuplicateRequest(clientId, bodyHash) {
+  const entry = duplicateRequestMap.get(clientId);
+
+  if (!entry) {
+    return false;
+  }
+
+  if (Date.now() - entry.timestamp > DUPLICATE_REQUEST_WINDOW) {
+    duplicateRequestMap.delete(clientId);
+    return false;
+  }
+
+  return entry.hash === bodyHash;
+}
+
+function recordSuspicious(clientId, category) {
+  const now = Date.now();
+  const existing = suspiciousMap.get(clientId) || { count: 0, categories: new Set(), resetTime: now + SUSPICIOUS_WINDOW };
+
+  if (now > existing.resetTime) {
+    existing.count = 0;
+    existing.categories = new Set();
+    existing.resetTime = now + SUSPICIOUS_WINDOW;
+  }
+
+  existing.count += 1;
+  existing.categories.add(category);
+  suspiciousMap.set(clientId, existing);
+
+  if (existing.count >= SUSPICIOUS_THRESHOLD) {
+    console.warn("[SUSPICIOUS ACTIVITY]", {
+      clientId,
+      count: existing.count,
+      categories: Array.from(existing.categories),
+      windowSeconds: SUSPICIOUS_WINDOW / 1000
+    });
+  }
 }
 
 exports.handler = async (event, context) => {
@@ -58,9 +124,11 @@ exports.handler = async (event, context) => {
     }
 
     const userId = authResult.uid;
+    const clientId = getClientIdentifier(event, userId);
 
-    // ✅ 4. Rate limiting por usuário
-    if (!checkRateLimit(userId)) {
+    // ✅ 4. Rate limiting por usuário e IP
+    if (!checkRateLimit(clientId)) {
+      recordSuspicious(clientId, 'rate-limit');
       return {
         statusCode: 429,
         headers: { "Content-Type": "application/json" },
@@ -81,6 +149,20 @@ exports.handler = async (event, context) => {
     }
 
     const { nome, email, cpf, valor } = parsedBody;
+
+    const requestHash = hashBody({ nome, email, cpf, valor });
+    const duplicateKey = `${clientId}:${requestHash}`;
+
+    if (isDuplicateRequest(duplicateKey, requestHash)) {
+      recordSuspicious(clientId, 'duplicate-request');
+      return {
+        statusCode: 429,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ error: "Duplicate payment attempt detected. Please wait and try again." })
+      };
+    }
+
+    markDuplicateRequest(duplicateKey, requestHash);
 
     // ✅ 6. Validação robusta de campos obrigatórios
     if (!validators.isValidNome(nome)) {
@@ -121,6 +203,7 @@ exports.handler = async (event, context) => {
 
     if (!API_KEY || !API_URL) {
       console.error("Missing ASAAS configuration");
+      recordSuspicious(clientId, 'configuration-error');
       return {
         statusCode: 500,
         headers: { "Content-Type": "application/json" },
@@ -196,6 +279,7 @@ exports.handler = async (event, context) => {
 
     // Respostas seguras de erro
     if (error.code === 'ECONNABORTED') {
+      recordSuspicious(clientId, 'payment-timeout');
       return {
         statusCode: 504,
         headers: { "Content-Type": "application/json" },
@@ -204,6 +288,7 @@ exports.handler = async (event, context) => {
     }
 
     if (statusCode === 422) {
+      recordSuspicious(clientId, 'invalid-payment');
       return {
         statusCode: 400,
         headers: { "Content-Type": "application/json" },
@@ -211,6 +296,7 @@ exports.handler = async (event, context) => {
       };
     }
 
+    recordSuspicious(clientId, 'server-error');
     return {
       statusCode: 500,
       headers: { "Content-Type": "application/json" },
