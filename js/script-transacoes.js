@@ -13,9 +13,13 @@ import {
   collection,
   deleteDoc,
   doc,
-  onSnapshot
+  onSnapshot,
+  query,
+  where,
+  getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { firebaseConfig } from "./config.js";
+import { redirecionarSePagamentoPendente } from "./utils-pagamento.js";
 
 /* 🔥 SUA CONFIG FIREBASE */
 
@@ -49,7 +53,7 @@ let transacoes = {};
 let userUID = null;
 
 // ================= AUTENTICAÇÃO =================
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
   if (!user) {
     // Substituir entrada do histórico para evitar aviso do navegador
     window.history.replaceState(null, '', '../index.html');
@@ -61,7 +65,12 @@ onAuthStateChanged(auth, (user) => {
 
   userUID = user.uid;
 
-  // mostra página somente após validar login
+  // Verificar se há mensalidade pendente antes de liberar acesso
+  if (await redirecionarSePagamentoPendente(db, userUID)) {
+    return;
+  }
+
+  // mostra página somente após validar login e pagamento
   document.body.style.display = "block";
 
   escutarTransacoes();

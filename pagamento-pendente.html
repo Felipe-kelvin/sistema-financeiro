@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pagamento Pendente - Fluxo de Caixa</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --primary-color: #2563eb;
+      --danger-color: #dc2626;
+      --warning-color: #f59e0b;
+      --bg-light: #f9fafb;
+      --text-primary: #1f2937;
+      --text-secondary: #6b7280;
+      --border-color: #e5e7eb;
+      --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.1);
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      color: var(--text-primary);
+    }
+
+    .bloqueio-container {
+      background: white;
+      border-radius: 1rem;
+      box-shadow: var(--shadow-lg);
+      width: 100%;
+      max-width: 520px;
+      padding: 3rem 2rem;
+      animation: slideDown 0.6s ease-out;
+      text-align: center;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .bloqueio-icon {
+      font-size: 4.5rem;
+      color: var(--danger-color);
+      margin-bottom: 1.5rem;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.05);
+      }
+    }
+
+    .bloqueio-title {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--danger-color);
+      margin-bottom: 1rem;
+      letter-spacing: -0.5px;
+    }
+
+    .bloqueio-subtitle {
+      font-size: 1rem;
+      color: var(--text-secondary);
+      margin-bottom: 2rem;
+      line-height: 1.6;
+    }
+
+    .bloqueio-info {
+      background: #fef2f2;
+      border-left: 4px solid var(--danger-color);
+      padding: 1.5rem;
+      border-radius: 0.5rem;
+      margin-bottom: 2rem;
+      text-align: left;
+    }
+
+    .info-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .info-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .info-icon {
+      color: var(--danger-color);
+      font-size: 1.5rem;
+      min-width: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .info-content h4 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 0.25rem;
+    }
+
+    .info-content p {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .info-value {
+      font-weight: 700;
+      color: var(--danger-color);
+    }
+
+    .bloqueio-details {
+      background: var(--bg-light);
+      padding: 1.5rem;
+      border-radius: 0.5rem;
+      margin-bottom: 2rem;
+      text-align: left;
+    }
+
+    .detail-label {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 0.5rem;
+    }
+
+    .detail-value {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 1.5rem;
+    }
+
+    .detail-value.amount {
+      color: var(--danger-color);
+      font-size: 1.75rem;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 1rem;
+      flex-direction: column;
+    }
+
+    .btn {
+      padding: 0.875rem 1.5rem;
+      border: none;
+      border-radius: 0.5rem;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: var(--primary-color);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #1d4ed8;
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(37, 99, 235, 0.2);
+    }
+
+    .btn-secondary {
+      background: var(--border-color);
+      color: var(--text-primary);
+    }
+
+    .btn-secondary:hover {
+      background: #d1d5db;
+    }
+
+    .countdown {
+      margin-top: 2rem;
+      padding-top: 2rem;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .countdown-text {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      margin-bottom: 1rem;
+    }
+
+    .countdown-timer {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--warning-color);
+      font-family: 'Courier New', monospace;
+      animation: blink 1s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.6;
+      }
+    }
+
+    .logout-link {
+      margin-top: 1rem;
+    }
+
+    .logout-link a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: var(--transition);
+    }
+
+    .logout-link a:hover {
+      color: var(--text-primary);
+    }
+
+    @media (max-width: 640px) {
+      .bloqueio-container {
+        padding: 2rem 1.5rem;
+      }
+
+      .bloqueio-title {
+        font-size: 1.5rem;
+      }
+
+      .bloqueio-icon {
+        font-size: 3.5rem;
+      }
+
+      .countdown-timer {
+        font-size: 2rem;
+      }
+    }
+
+    .loading-spinner {
+      display: inline-block;
+      width: 40px;
+      height: 40px;
+      border: 4px solid var(--border-color);
+      border-top-color: var(--primary-color);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 2rem 0;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .status-pendente {
+      display: inline-block;
+      background: #fef2f2;
+      color: var(--danger-color);
+      padding: 0.5rem 1rem;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+
+    .alert-box {
+      background: #fef3c7;
+      border: 1px solid #fcd34d;
+      color: #92400e;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+    }
+
+    .alert-box i {
+      font-size: 1.25rem;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="bloqueio-container">
+    <!-- Ícone de Bloqueio -->
+    <div class="bloqueio-icon">
+      <i class="fas fa-lock"></i>
+    </div>
+
+    <!-- Título -->
+    <h1 class="bloqueio-title">Acesso Bloqueado</h1>
+    <p class="bloqueio-subtitle">
+      Seu acesso ao sistema está temporariamente bloqueado por falta de pagamento.
+    </p>
+
+    <!-- Status -->
+    <div class="status-pendente">
+      <i class="fas fa-exclamation-circle"></i> Pagamento Pendente
+    </div>
+
+    <!-- Alerta -->
+    <div class="alert-box">
+      <i class="fas fa-info-circle"></i>
+      <div>
+        <strong>Atenção:</strong> Você precisa efetuar o pagamento da mensalidade para continuar usando o sistema.
+      </div>
+    </div>
+
+    <!-- Informações da Mensalidade -->
+    <div class="bloqueio-info" id="info-container">
+      <div class="loading-spinner"></div>
+      <p style="color: var(--text-secondary); margin-top: 1rem;">Carregando informações...</p>
+    </div>
+
+    <!-- Botões de Ação -->
+    <div class="action-buttons">
+      <button class="btn btn-primary" onclick="irParaMensalidade()">
+        <i class="fas fa-credit-card"></i> Efetuar Pagamento Agora
+      </button>
+      <button class="btn btn-secondary" id="btn-logout">
+        <i class="fas fa-sign-out-alt"></i> Sair da Conta
+      </button>
+    </div>
+
+    <!-- Informações adicionais -->
+    <div class="logout-link">
+      <a href="#" onclick="atualizarStatus()">
+        <i class="fas fa-redo"></i> Atualizar Status
+      </a>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import {
+      getFirestore,
+      collection,
+      query,
+      where,
+      getDocs,
+      onSnapshot
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { firebaseConfig } from "./js/config.js";
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let userUID = null;
+
+    // Autenticação
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        window.location.href = "./index.html";
+        return;
+      }
+      userUID = user.uid;
+      carregarInfoMensalidade();
+    });
+
+    // Carregar informações da mensalidade pendente
+    async function carregarInfoMensalidade() {
+      try {
+        const mensalidadesRef = collection(db, "mensalidades", userUID, "lista");
+        const q = query(mensalidadesRef, where("status", "==", "pendente"));
+        
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+          const docSnap = querySnapshot.docs[0];
+          const dados = docSnap.data();
+          
+          exibirInfoMensalidade(dados);
+          
+          // Escutar mudanças em tempo real
+          onSnapshot(q, (snapshot) => {
+            if (snapshot.empty) {
+              // Pagamento foi feito, redirecionar para o dashboard
+              window.location.href = "./html/caixa.html";
+            }
+          });
+        } else {
+          // Sem mensalidades pendentes, redirecionar
+          window.location.href = "./html/caixa.html";
+        }
+      } catch (error) {
+        console.error("Erro ao carregar mensalidade:", error);
+        exibirErro("Erro ao carregar informações de pagamento");
+      }
+    }
+
+    // Exibir informações da mensalidade
+    function exibirInfoMensalidade(dados) {
+      const infoContainer = document.getElementById("info-container");
+      
+      const valor = parseFloat(dados.valor || 0);
+      const valorFormatado = new Intl.NumberFormat("pt-BR", {
+        style: "currency",
+        currency: "BRL"
+      }).format(valor);
+
+      const data = dados.vencimento;
+      let dataFormatada = "Não informado";
+      if (data) {
+        const d = new Date(data.seconds ? data.seconds * 1000 : data);
+        dataFormatada = d.toLocaleDateString("pt-BR");
+      }
+
+      infoContainer.innerHTML = `
+        <div class="info-item">
+          <div class="info-icon">
+            <i class="fas fa-receipt"></i>
+          </div>
+          <div class="info-content">
+            <h4>Descrição</h4>
+            <p>${dados.descricao || "Mensalidade"}</p>
+          </div>
+        </div>
+        <div class="info-item">
+          <div class="info-icon">
+            <i class="fas fa-money-bill-wave"></i>
+          </div>
+          <div class="info-content">
+            <h4>Valor devido</h4>
+            <p><span class="info-value">${valorFormatado}</span></p>
+          </div>
+        </div>
+        <div class="info-item">
+          <div class="info-icon">
+            <i class="fas fa-calendar"></i>
+          </div>
+          <div class="info-content">
+            <h4>Data de vencimento</h4>
+            <p>${dataFormatada}</p>
+          </div>
+        </div>
+      `;
+    }
+
+    // Exibir erro
+    function exibirErro(mensagem) {
+      const infoContainer = document.getElementById("info-container");
+      infoContainer.innerHTML = `
+        <div class="alert-box">
+          <i class="fas fa-exclamation-triangle"></i>
+          <div>
+            <strong>Erro:</strong> ${mensagem}
+          </div>
+        </div>
+      `;
+    }
+
+    // Logout
+    document.getElementById("btn-logout").addEventListener("click", async () => {
+      try {
+        await signOut(auth);
+        window.location.href = "./index.html";
+      } catch (error) {
+        console.error("Erro ao fazer logout:", error);
+      }
+    });
+
+    // Ir para mensalidade
+    window.irParaMensalidade = function() {
+      window.location.href = "./html/mensalidade.html";
+    };
+
+    // Atualizar status
+    window.atualizarStatus = function(e) {
+      if (e) e.preventDefault();
+      carregarInfoMensalidade();
+    };
+  </script>
+</body>
+
+</html>

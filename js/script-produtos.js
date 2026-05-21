@@ -11,9 +11,11 @@ import {
   onSnapshot,
   query,
   where,
-  Timestamp
+  Timestamp,
+  getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { firebaseConfig } from "./config.js";
+import { redirecionarSePagamentoPendente } from "./utils-pagamento.js";
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -62,7 +64,7 @@ let produtos = {};
 let produtoAtualSelecionado = null;
 let produtoEditandoId = null;
 
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
   if (!user) {
     // Substituir entrada do histórico para evitar aviso do navegador
     window.history.replaceState(null, '', '../index.html');
@@ -71,6 +73,12 @@ onAuthStateChanged(auth, (user) => {
   }
 
   userUID = user.uid;
+
+  // Verificar se há mensalidade pendente antes de liberar acesso
+  if (await redirecionarSePagamentoPendente(db, userUID)) {
+    return;
+  }
+
   document.body.style.display = "flex";
   carregarProdutos();
 });
