@@ -124,7 +124,7 @@ function carregarMensalidades() {
   // console.log("🔄 Carregando mensalidades para userUID:", userUID);
 
   const q = query(
-    collection(db, `users/${userUID}/mensalidades`)
+    collection(db, "users", userUID, "mensalidades")
   );
 
   onSnapshot(q, (snapshot) => {
@@ -388,7 +388,7 @@ formPagamento.addEventListener("submit", async (e) => {
   // qualquer outro método, gravar imediatamente no Firestore
   try {
     await updateDoc(
-      doc(db, `users/${userUID}/mensalidades`, mensalidadeSelecionada.id),
+      doc(db, "users", userUID, "mensalidades", mensalidadeSelecionada.id),
       {
         status: "pago",
         dataPagamento: new Date(dataPag),
@@ -398,7 +398,7 @@ formPagamento.addEventListener("submit", async (e) => {
       }
     );
 
-    await addDoc(collection(db, `users/${userUID}/pagamentos`), {
+    await addDoc(collection(db, "users", userUID, "pagamentos"), {
       tipo: "entrada",
       descricao: `Pagamento de Mensalidade: ${mensalidadeSelecionada.titulo || mensalidadeSelecionada.descricao || "Mensalidade"}`,
       valor: mensalidadeSelecionada.valor,
@@ -439,7 +439,7 @@ formAdicionarMensalidade.addEventListener("submit", async (e) => {
   try {
     console.log("💾 Salvando nova mensalidade...");
     
-    await addDoc(collection(db, `users/${userUID}/mensalidades`), {
+await addDoc(collection(db, "users", userUID, "mensalidades"), {
       titulo: titulo,
       valor: valor,
       vencimento: new Date(vencimento),
