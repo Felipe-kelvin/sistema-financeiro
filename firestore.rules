@@ -41,6 +41,28 @@ service cloud.firestore {
       allow delete: if isAuth() && isOwner(resource.data.userId);
     }
 
+    // ==================== PRODUTOS ====================
+    // Coleção: produtos
+    // Uso: Gerenciar produtos do usuário
+    match /produtos/{document=**} {
+      allow read: if isAuth() && resource.data.userId == request.auth.uid;
+      allow create: if isAuth() && request.resource.data.userId == request.auth.uid &&
+        request.resource.data.nome is string && request.resource.data.nome.size() > 0 &&
+        request.resource.data.quantidade is number && request.resource.data.quantidade >= 0 &&
+        request.resource.data.preco is number && request.resource.data.preco >= 0 &&
+        (request.resource.data.categoria is string || request.resource.data.categoria == null) &&
+        request.resource.data.criadoEm is timestamp &&
+        request.resource.data.atualizadoEm is timestamp;
+      allow update: if isAuth() && isOwner(resource.data.userId) &&
+        request.resource.data.userId == resource.data.userId &&
+        request.resource.data.nome is string && request.resource.data.nome.size() > 0 &&
+        request.resource.data.quantidade is number && request.resource.data.quantidade >= 0 &&
+        request.resource.data.preco is number && request.resource.data.preco >= 0 &&
+        (request.resource.data.categoria is string || request.resource.data.categoria == null) &&
+        request.resource.data.atualizadoEm is timestamp;
+      allow delete: if isAuth() && isOwner(resource.data.userId);
+    }
+
     // ==================== VENDAS ====================
     // Coleção: vendas
     // Uso: Registrar histórico de vendas
