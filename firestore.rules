@@ -45,7 +45,7 @@ service cloud.firestore {
     // Coleção: produtos
     // Uso: Gerenciar produtos do usuário
     match /produtos/{document=**} {
-      allow read: if isAuth() && resource.data.userId == request.auth.uid;
+      allow get, list: if isAuth() && resource.data.userId == request.auth.uid;
       allow create: if isAuth() && request.resource.data.userId == request.auth.uid &&
         request.resource.data.nome is string && request.resource.data.nome.size() > 0 &&
         request.resource.data.quantidade is number && request.resource.data.quantidade >= 0 &&
@@ -68,15 +68,16 @@ service cloud.firestore {
     // Uso: Registrar histórico de vendas
     match /vendas/{document=**} {
       // Leitura: apenas dados do próprio usuário
-      allow read: if isAuth() && resource.data.userId == request.auth.uid;
+      allow get, list: if isAuth() && resource.data.userId == request.auth.uid;
 
       // Criação: apenas usuário autenticado
-      allow create: if isAuth() && request.data.userId == request.auth.uid &&
-        request.data.produtoId is string && request.data.produtoId.size() > 0 &&
-        request.data.produtoNome is string && request.data.produtoNome.size() > 0 &&
-        request.data.quantidade is number && request.data.quantidade > 0 &&
-        request.data.precoUnitario is number && request.data.precoUnitario >= 0 &&
-        request.data.total is number && request.data.total > 0;
+      allow create: if isAuth() && request.resource.data.userId == request.auth.uid &&
+        request.resource.data.produtoId is string && request.resource.data.produtoId.size() > 0 &&
+        request.resource.data.produtoNome is string && request.resource.data.produtoNome.size() > 0 &&
+        request.resource.data.quantidade is number && request.resource.data.quantidade > 0 &&
+        request.resource.data.precoUnitario is number && request.resource.data.precoUnitario >= 0 &&
+        request.resource.data.total is number && request.resource.data.total > 0 &&
+        request.resource.data.dataVenda is timestamp;
 
       // Nenhuma atualização ou deleção de vendas (apenas leitura/criação)
       allow update, delete: if false;
@@ -87,7 +88,7 @@ service cloud.firestore {
     // Uso: Registrar entrada/saída de caixa por usuário
     match /transacoes/{userId}/lista/{document=**} {
       // Leitura: apenas dados do próprio usuário
-      allow read: if isAuth() && isOwner(userId);
+      allow get, list: if isAuth() && isOwner(userId);
 
       // Criação: apenas do próprio usuário
       allow create: if isAuth() && isOwner(userId) &&
