@@ -14,7 +14,7 @@ export async function verificarPagamentoPendente(db, userUID) {
     if (!userUID) return false;
     
     // Verificar se há mensalidades pendentes
-    const mensalidadesRef = collection(db, "mensalidades", userUID, "lista");
+    const mensalidadesRef = collection(db, "users", userUID, "mensalidades");
     const q = query(mensalidadesRef, where("status", "==", "pendente"));
     
     const querySnapshot = await getDocs(q);

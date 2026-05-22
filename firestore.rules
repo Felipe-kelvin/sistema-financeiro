@@ -11,6 +11,11 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
 
+    // Função para verificar administrador
+    function isAdmin() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
+    }
+
     // ==================== ESTOQUE ====================
     // Coleção: estoque
     // Uso: Armazenar produtos cadastrados por usuário
@@ -83,13 +88,15 @@ service cloud.firestore {
     // Coleção: users/userId/mensalidades
     // Uso: Registrar mensalidades por usuário
     match /users/{userId}/mensalidades/{document=**} {
-      allow read: if isAuth() && isOwner(userId);
-      allow create: if isAuth() && isOwner(userId) &&
-        request.resource.data.aluno is string && request.resource.data.aluno.size() > 0 &&
+      allow read: if isAuth() && (isOwner(userId) || isAdmin());
+      allow create: if isAuth() && (isOwner(userId) || isAdmin()) &&
+        request.resource.data.titulo is string && request.resource.data.titulo.size() > 0 &&
         request.resource.data.valor is number && request.resource.data.valor > 0 &&
-        request.resource.data.status in ['pendente', 'pago', 'atrasado'];
-      allow update: if isAuth() && isOwner(userId);
-      allow delete: if isAuth() && isOwner(userId);
+        request.resource.data.status in ['pendente', 'pago', 'atrasado'] &&
+        (request.resource.data.descricao is string || request.resource.data.descricao == null) &&
+        (request.resource.data.vencimento is timestamp || request.resource.data.vencimento == null);
+      allow update: if isAuth() && (isOwner(userId) || isAdmin());
+      allow delete: if isAuth() && (isOwner(userId) || isAdmin());
     }
 
     // ==================== PAGAMENTOS ====================
@@ -106,7 +113,7 @@ service cloud.firestore {
     // ==================== AUTH - Metadata de Usuário ====================
     // Coleção: users (opcional, para armazenar dados de usuário)
     match /users/{userId} {
-      allow read: if isAuth() && isOwner(userId);
+      allow read: if isAuth() && (isOwner(userId) || isAdmin());
       allow write: if isAuth() && isOwner(userId);
     }
 
