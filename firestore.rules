@@ -21,21 +21,21 @@ service cloud.firestore {
     // Uso: Armazenar produtos cadastrados por usuário
     match /estoque/{document=**} {
       // Permissão de leitura: apenas dados do próprio usuário
-      allow read: if isAuth() && resource.data.userId == request.auth.uid;
+      allow get, list: if isAuth() && resource.data.userId == request.auth.uid;
 
       // Permissão de criação: apenas usuário autenticado (cria com seu UID)
-      allow create: if isAuth() && request.data.userId == request.auth.uid &&
-        request.data.nome is string && request.data.nome.size() > 0 &&
-        request.data.quantidade is number && request.data.quantidade >= 0 &&
-        request.data.preco is number && request.data.preco >= 0 &&
+      allow create: if isAuth() && request.resource.data.userId == request.auth.uid &&
+        request.resource.data.nome is string && request.resource.data.nome.size() > 0 &&
+        request.resource.data.quantidade is number && request.resource.data.quantidade >= 0 &&
+        request.resource.data.preco is number && request.resource.data.preco >= 0 &&
         request.resource.size() <= 1000; // Limite de tamanho
 
       // Permissão de atualização: apenas do próprio usuário
       allow update: if isAuth() && isOwner(resource.data.userId) &&
-        request.data.userId == resource.data.userId && // userId não pode ser alterado
-        request.data.nome is string && request.data.nome.size() > 0 &&
-        request.data.quantidade is number && request.data.quantidade >= 0 &&
-        request.data.preco is number && request.data.preco >= 0;
+        request.resource.data.userId == resource.data.userId && // userId não pode ser alterado
+        request.resource.data.nome is string && request.resource.data.nome.size() > 0 &&
+        request.resource.data.quantidade is number && request.resource.data.quantidade >= 0 &&
+        request.resource.data.preco is number && request.resource.data.preco >= 0;
 
       // Permissão de deleção: apenas do próprio usuário
       allow delete: if isAuth() && isOwner(resource.data.userId);
