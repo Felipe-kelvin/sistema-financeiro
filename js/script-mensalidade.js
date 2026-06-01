@@ -343,13 +343,31 @@ window.abrirModalPagamento = (id) => {
 
 // ================= FECHAR MODAL =================
 window.fecharModal = () => {
+  // Se ainda houver mensalidade selecionada pendente, não permitir fechar
+  if (mensalidadeSelecionada && mensalidadeSelecionada.status !== 'pago') {
+    mostrarAvisoFecharModal();
+    return;
+  }
+
   modal.style.display = "none";
   mensalidadeSelecionada = null;
 };
 
 window.addEventListener("click", (e) => {
-  if (e.target === modal) fecharModal();
+  if (e.target === modal) {
+    // Tentativa de fechar clicando fora do conteúdo
+    if (mensalidadeSelecionada && mensalidadeSelecionada.status !== 'pago') {
+      mostrarAvisoFecharModal();
+    } else {
+      fecharModal();
+    }
+  }
 });
+
+function mostrarAvisoFecharModal() {
+  // Mensagem clara para o usuário
+  alert('Você precisa efetuar o pagamento da mensalidade para continuar usando o sistema. O modal permanecerá aberto até o pagamento.');
+}
 
 // ================= SALVAR PAGAMENTO =================
 formPagamento.addEventListener("submit", async (e) => {
@@ -479,9 +497,12 @@ formPagamento.addEventListener("submit", async (e) => {
     });
 
     alert("✅ Pagamento registrado com sucesso!");
-    fecharModal();
-    // Remover bloqueio caso exista
+    // Atualizar estado local e remover bloqueio antes de fechar o modal
+    try {
+      if (mensalidadeSelecionada) mensalidadeSelecionada.status = 'pago';
+    } catch (e) {}
     try { desbloquearAcoes(); } catch (e) { /* ignore */ }
+    fecharModal();
   } catch (error) {
     console.error("Erro ao registrar pagamento:", error);
     alert("Erro ao registrar pagamento");
