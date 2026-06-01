@@ -386,6 +386,7 @@
     const db = getFirestore(app);
 
     let userUID = null;
+    let currentMensalidadeId = null;
 
     // Autenticação
     onAuthStateChanged(auth, (user) => {
@@ -408,6 +409,7 @@
         if (!querySnapshot.empty) {
           const docSnap = querySnapshot.docs[0];
           const dados = docSnap.data();
+          currentMensalidadeId = docSnap.id;
           
           exibirInfoMensalidade(dados);
           
@@ -501,7 +503,11 @@
 
     // Ir para mensalidade
     window.irParaMensalidade = function() {
-      window.location.href = "./html/mensalidade.html";
+      if (currentMensalidadeId) {
+        window.location.href = `./mensalidade.html?mensalidadeId=${currentMensalidadeId}`;
+      } else {
+        window.location.href = "./mensalidade.html";
+      }
     };
 
     // Atualizar status

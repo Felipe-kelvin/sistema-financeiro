@@ -64,6 +64,7 @@ let userUID = null;
 let mensalidades = [];
 let filtroAtual = "pendente";
 let mensalidadeSelecionada = null;
+let _blockingOverlay = null;
 
 // ================= AUTENTICAÇÃO =================
 onAuthStateChanged(auth, (user) => {
@@ -147,9 +148,77 @@ function carregarMensalidades() {
     });
     
     renderizarMensalidades();
+    // Bloquear navegação caso existam mensalidades pendentes
+    verificarBloqueioEAutoOpen();
   }, (error) => {
     console.error("❌ Erro ao carregar mensalidades:", error);
   });
+}
+
+function getQueryParam(name) {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    return params.get(name);
+  } catch (e) {
+    return null;
+  }
+}
+
+function verificarBloqueioEAutoOpen() {
+  const temPendente = mensalidades.some(m => m.status !== 'pago');
+  if (temPendente) {
+    bloquearAcoes();
+  } else {
+    desbloquearAcoes();
+  }
+
+  // Se veio com mensalidadeId na query, abrir modal automaticamente
+  const mensalidadeId = getQueryParam('mensalidadeId');
+  if (mensalidadeId) {
+    const encontrado = mensalidades.find(m => m.id === mensalidadeId);
+    if (encontrado && encontrado.status !== 'pago') {
+      abrirModalPagamento(mensalidadeId);
+    }
+  }
+}
+
+function bloquearAcoes() {
+  if (_blockingOverlay) return;
+  _blockingOverlay = document.createElement('div');
+  _blockingOverlay.id = 'blocking-overlay';
+  Object.assign(_blockingOverlay.style, {
+    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+    background: 'rgba(255,255,255,0.6)', zIndex: 9998, backdropFilter: 'blur(2px)'
+  });
+  document.body.appendChild(_blockingOverlay);
+  if (modal) modal.style.zIndex = 9999;
+  document.addEventListener('click', interceptClick, true);
+  window.addEventListener('beforeunload', beforeUnloadHandler);
+  // permitir logout mesmo com bloqueio
+  if (logoutBtn) logoutBtn.setAttribute('data-allow-navigation', 'true');
+}
+
+function desbloquearAcoes() {
+  if (!_blockingOverlay) return;
+  _blockingOverlay.remove();
+  _blockingOverlay = null;
+  if (modal) modal.style.zIndex = '';
+  document.removeEventListener('click', interceptClick, true);
+  window.removeEventListener('beforeunload', beforeUnloadHandler);
+  if (logoutBtn) logoutBtn.removeAttribute('data-allow-navigation');
+}
+
+function interceptClick(e) {
+  if (modal && modal.contains(e.target)) return;
+  if (e.target.closest('[data-allow-navigation]')) return;
+  e.stopImmediatePropagation();
+  e.preventDefault();
+  alert('Você precisa efetuar o pagamento da mensalidade para acessar outras áreas.');
+}
+
+function beforeUnloadHandler(e) {
+  e.preventDefault();
+  e.returnValue = 'Você precisa efetuar o pagamento da mensalidade para sair desta página.';
 }
 
 // ================= FILTRAR MENSALIDADES =================
@@ -411,6 +480,8 @@ formPagamento.addEventListener("submit", async (e) => {
 
     alert("✅ Pagamento registrado com sucesso!");
     fecharModal();
+    // Remover bloqueio caso exista
+    try { desbloquearAcoes(); } catch (e) { /* ignore */ }
   } catch (error) {
     console.error("Erro ao registrar pagamento:", error);
     alert("Erro ao registrar pagamento");
