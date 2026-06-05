@@ -318,13 +318,17 @@ const valueLabelPlugin = {
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
 
-        const label = dataset.yAxisID === "y" || dataset.yAxisID === "y1" ? formatarMoeda(dataValue) : String(dataValue);
+        const label = dataset.yAxisID === "y" ? formatarMoeda(dataValue) : dataset.yAxisID === "y1" ? formatarNumero(dataValue) : String(dataValue);
         ctx.fillText(label, position.x, yPosition);
         ctx.restore();
       });
     });
   }
 };
+
+function formatarNumero(valor) {
+  return Number(valor).toLocaleString('pt-BR');
+}
 
 function atualizarGraficoVendas(dadosVendasPorMes) {
   if (typeof Chart === "undefined") {
@@ -406,7 +410,7 @@ function atualizarGraficoVendas(dadosVendasPorMes) {
               drawOnChartArea: false
             },
             ticks: {
-              callback: (value) => value
+              callback: (value) => formatarNumero(value)
             }
           }
         },

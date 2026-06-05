@@ -30,7 +30,7 @@ const db = getFirestore(app);
 // ================= SEGURANÇA DE CARREGAMENTO =================
 document.body.style.display = "none";
 
-// ================= UTIL =================
+// ================= UTIL CONTRA XSS =================
 function escaparHTML(texto = "") {
   return texto
     .replace(/&/g, "&amp;")
