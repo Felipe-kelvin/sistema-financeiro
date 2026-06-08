@@ -16,6 +16,8 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { firebaseConfig } from "./config.js";
 import { redirecionarSePagamentoPendente } from "./utils-pagamento.js";
+import { createElement, clearElement } from "./dom-utils.js";
+import { showSuccess, showError } from "./ui-feedback.js";
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -88,7 +90,7 @@ logoutBtn.addEventListener("click", async () => {
     await signOut(auth);
     window.location.href = "../index.html";
   } catch (erro) {
-    alert("Erro ao sair: " + erro.message);
+    showError("Erro ao sair: " + erro.message);
   }
 });
 
@@ -116,30 +118,51 @@ function renderizarProdutos() {
     (p.categoria && p.categoria.toLowerCase().includes(filtro))
   );
 
+  clearElement(tabelaProdutos);
+  vazioMensagem.style.display = produtosFiltrados.length === 0 ? (Object.keys(produtos).length === 0 ? 'flex' : 'none') : 'none';
+
   if (produtosFiltrados.length === 0) {
-    tabelaProdutos.innerHTML = '';
-    vazioMensagem.style.display = Object.keys(produtos).length === 0 ? 'flex' : 'none';
     return;
   }
 
-  vazioMensagem.style.display = 'none';
+  produtosFiltrados.forEach((p) => {
+    const row = createElement('tr', { attrs: { 'data-id': p.id } });
 
-  tabelaProdutos.innerHTML = produtosFiltrados.map(p => `
-    <tr data-id="${p.id}">
-      <td><strong>${escaparHTML(p.nome)}</strong></td>
-      <td>${p.categoria ? escaparHTML(p.categoria) : '-'}</td>
-      <td><span class="badge-qtd ${p.quantidade <= 5 ? 'alerta' : ''}">${p.quantidade} un.</span></td>
-      <td>${formatarMoeda(p.preco)}</td>
-      <td><strong>${formatarMoeda(p.quantidade * p.preco)}</strong></td>
-      <td>
-        <div class="btn-group-small">
-          <button class="btn btn-sm btn-success" onclick="window.abrirModalVenda('${p.id}')"><i class="fas fa-sell"></i>Registrar Venda</button>
-          <button class="btn btn-sm btn-primary" onclick="window.editarProduto('${p.id}')"><i class="fas fa-edit"></i> Editar</button>
-          <button class="btn btn-sm btn-danger" onclick="window.deletarProduto('${p.id}')"><i class="fas fa-trash"></i> Deletar</button>
-        </div>
-      </td>
-    </tr>
-  `).join('');
+    const nomeCell = createElement('td', { children: [createElement('strong', { text: p.nome })] });
+    const categoriaCell = createElement('td', { text: p.categoria ? p.categoria : '-' });
+    const badgeClass = p.quantidade <= 5 ? 'badge-qtd alerta' : 'badge-qtd';
+    const quantidadeCell = createElement('td', { children: [createElement('span', { className: badgeClass, text: `${p.quantidade} un.` })] });
+    const precoCell = createElement('td', { text: formatarMoeda(p.preco) });
+    const totalCell = createElement('td', { children: [createElement('strong', { text: formatarMoeda(p.quantidade * p.preco) })] });
+
+    const btnGroup = createElement('div', { className: 'btn-group-small' });
+    const vendaBtn = createElement('button', {
+      className: 'btn btn-sm btn-success',
+      attrs: { type: 'button' },
+      text: 'Registrar Venda'
+    });
+    vendaBtn.addEventListener('click', () => abrirModalVenda(p.id));
+
+    const editarBtn = createElement('button', {
+      className: 'btn btn-sm btn-primary',
+      attrs: { type: 'button' },
+      text: 'Editar'
+    });
+    editarBtn.addEventListener('click', () => editarProduto(p.id));
+
+    const deletarBtn = createElement('button', {
+      className: 'btn btn-sm btn-danger',
+      attrs: { type: 'button' },
+      text: 'Deletar'
+    });
+    deletarBtn.addEventListener('click', () => deletarProduto(p.id));
+
+    btnGroup.append(vendaBtn, editarBtn, deletarBtn);
+    const actionsCell = createElement('td', { children: [btnGroup] });
+
+    row.append(nomeCell, categoriaCell, quantidadeCell, precoCell, totalCell, actionsCell);
+    tabelaProdutos.appendChild(row);
+  });
 }
 
 function atualizarStats() {
@@ -161,7 +184,7 @@ async function salvarProduto(e) {
   const btnSubmit = formProduto.querySelector('button[type="submit"]');
 
   if (!nome) {
-    alert("Digite o nome do produto!");
+    showError("Digite o nome do produto!");
     return;
   }
 
@@ -174,7 +197,7 @@ async function salvarProduto(e) {
 
       produtoEditandoId = null;
       btnSubmit.innerHTML = '<i class="fas fa-save"></i> Cadastrar Produto';
-      alert("Produto atualizado com sucesso!");
+      showSuccess("Produto atualizado com sucesso!");
     } else {
       await addDoc(collection(db, "produtos"), {
         userId: userUID,
@@ -185,12 +208,12 @@ async function salvarProduto(e) {
         criadoEm: Timestamp.now(),
         atualizadoEm: Timestamp.now()
       });
-      alert("Produto cadastrado com sucesso!");
+      showSuccess("Produto cadastrado com sucesso!");
     }
 
     formProduto.reset();
   } catch (erro) {
-    alert("Erro ao salvar produto: " + erro.message);
+    showError("Erro ao salvar produto: " + erro.message);
   }
 }
 
@@ -199,7 +222,7 @@ function abrirModalVenda(produtoId) {
   produtoAtualSelecionado = produtos[produtoId];
 
   if (!produtoAtualSelecionado) {
-    alert("Produto não encontrado!");
+    showError("Produto não encontrado!");
     return;
   }
 
@@ -245,9 +268,9 @@ confirmarVendaBtn.addEventListener("click", async () => {
   const totalVenda = parseFloat(modalTotalVendaInput.value) || 0;
   const custoTotal = parseFloat(modalCustoProdutoInput.value) || 0;
 
-  if (qtdVendida <= 0) { alert("Quantidade deve ser maior que 0!"); return; }
-  if (totalVenda <= 0) { alert("Informe um valor total válido para a venda!"); return; }
-  if (custoTotal < 0) { alert("Informe um valor de custo válido para a venda!"); return; }
+  if (qtdVendida <= 0) { showError("Quantidade deve ser maior que 0!"); return; }
+  if (totalVenda <= 0) { showError("Informe um valor total válido para a venda!"); return; }
+  if (custoTotal < 0) { showError("Informe um valor de custo válido para a venda!"); return; }
 
   try {
     const agora = new Date();
@@ -282,9 +305,9 @@ confirmarVendaBtn.addEventListener("click", async () => {
 
     modalVenda.style.display = "none";
     produtoAtualSelecionado = null;
-    alert("Venda registrada com sucesso!");
+    showSuccess("Venda registrada com sucesso!");
   } catch (erro) {
-    alert("Erro ao registrar venda: " + erro.message);
+    showError("Erro ao registrar venda: " + erro.message);
   }
 });
 
@@ -309,9 +332,9 @@ async function deletarProduto(produtoId) {
 
   try {
     await deleteDoc(doc(db, "produtos", produtoId));
-    alert("Produto deletado com sucesso!");
+    showSuccess("Produto deletado com sucesso!");
   } catch (erro) {
-    alert("Erro ao deletar produto: " + erro.message);
+    showError("Erro ao deletar produto: " + erro.message);
   }
 }
 

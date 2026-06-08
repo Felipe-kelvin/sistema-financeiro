@@ -20,6 +20,8 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { firebaseConfig } from "./config.js";
 import { redirecionarSePagamentoPendente } from "./utils-pagamento.js";
+import { createElement, clearElement } from "./dom-utils.js";
+import { showError } from "./ui-feedback.js";
 
 /* 🔥 SUA CONFIG FIREBASE */
 
@@ -103,7 +105,7 @@ function escutarTransacoes() {
 
 // ================= ATUALIZAR UI =================
 function atualizarUI() {
-  lista.innerHTML = "";
+  clearElement(lista);
   saldo = 0;
   let temTransacoes = false;
 
@@ -112,58 +114,51 @@ function atualizarUI() {
   for (let mes in transacoes) {
     if (filtroMes && mes !== filtroMes) continue;
 
-    temTransacoes = true;
-
     transacoes[mes].forEach((t, index) => {
-      const li = document.createElement("li");
-      li.classList.add(t.tipo);
+      temTransacoes = true;
 
-      const icon = t.tipo === "entrada" 
-        ? '<i class="fas fa-arrow-down"></i>' 
-        : '<i class="fas fa-arrow-up"></i>';
-
+      const li = createElement("li", { className: t.tipo });
       const iconBg = t.tipo === "entrada" ? "#10b981" : "#ef4444";
+      const icon = createElement("i", { className: t.tipo === "entrada" ? "fas fa-arrow-down" : "fas fa-arrow-up" });
+      const iconWrapper = createElement("div", { className: "transacao-icon" });
+      iconWrapper.style.background = iconBg;
+      iconWrapper.appendChild(icon);
 
-      li.innerHTML = `
-        <div class="transacao-info">
-          <div class="transacao-icon" style="background: ${iconBg};">
-            ${icon}
-          </div>
-          <div class="transacao-details">
-            <h4>${escaparHTML(t.descricao)}</h4>
-            <p>${formatarMes(mes)}</p>
-          </div>
-        </div>
-        <div class="transacao-valor">
-          <span class="valor">${t.tipo === "entrada" ? "+" : "-"} R$ ${t.valor.toFixed(2)}</span>
-          <button class="delete" id="delete-${mes}-${index}">
-            <i class="fas fa-trash"></i>
-          </button>
-        </div>
-      `;
+      const details = createElement("div", { className: "transacao-details" });
+      details.append(
+        createElement("h4", { text: t.descricao }),
+        createElement("p", { text: formatarMes(mes) })
+      );
 
-      const deleteBtn = li.querySelector(`#delete-${mes}-${index}`);
+      const info = createElement("div", { className: "transacao-info", children: [iconWrapper, details] });
+      const valorTexto = `${t.tipo === "entrada" ? "+" : "-"} R$ ${t.valor.toFixed(2)}`;
+      const valorSpan = createElement("span", { className: "valor", text: valorTexto });
+      const deleteBtn = createElement("button", { className: "delete", attrs: { type: "button" } });
+      deleteBtn.appendChild(createElement("i", { className: "fas fa-trash" }));
       deleteBtn.addEventListener("click", () => clean(mes, index));
 
+      const valorBox = createElement("div", { className: "transacao-valor", children: [valorSpan, deleteBtn] });
+      li.append(info, valorBox);
       lista.appendChild(li);
+
       saldo += (t.tipo === "entrada" ? t.valor : -t.valor);
     });
   }
 
-  // Mostrar mensagem vazia se não houver transações
   if (!temTransacoes) {
-    const emptyState = document.createElement("div");
-    emptyState.className = "empty-state";
-    emptyState.innerHTML = `
-      <i class="fas fa-inbox"></i>
-      <p>Nenhuma transação encontrada</p>
-    `;
+    const emptyState = createElement("div", { className: "empty-state" });
+    emptyState.append(
+      createElement("i", { className: "fas fa-inbox" }),
+      createElement("p", { text: "Nenhuma transação encontrada" })
+    );
     lista.appendChild(emptyState);
   }
 
-  if(saldo < 0){
+  if (saldo < 0) {
     saldoEl.style.color = "red";
-  } 
+  } else {
+    saldoEl.style.color = "";
+  }
 
   saldoEl.textContent = saldo.toLocaleString('pt-BR', {
     style: 'currency',
@@ -258,7 +253,7 @@ logoutBtn.addEventListener("click", async () => {
     window.location.href = "../index.html";
   } catch (error) {
     console.error("Erro ao fazer logout:", error);
-    alert("Erro ao fazer logout");
+    showError("Erro ao fazer logout");
   }
 });
 

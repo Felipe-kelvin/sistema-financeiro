@@ -23,6 +23,8 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { firebaseConfig } from "./config.js";
 import { redirecionarSePagamentoPendente } from "./utils-pagamento.js";
+import { createElement, clearElement } from "./dom-utils.js";
+import { showSuccess, showError } from "./ui-feedback.js";
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -109,7 +111,7 @@ logoutBtn.addEventListener("click", async () => {
     await signOut(auth);
     window.location.href = "../index.html";
   } catch (erro) {
-    alert("Erro ao sair: " + erro.message);
+    showError("Erro ao sair: " + erro.message);
   }
 });
 
@@ -140,46 +142,50 @@ function carregarProdutos() {
 // ================= RENDERIZAR PRODUTOS =================
 function renderizarProdutos() {
   const filtro = filtroProdutoInput.value.toLowerCase();
-  const produtosFiltrados = Object.values(produtos).filter(p => 
+  const produtosFiltrados = Object.values(produtos).filter(p =>
     p.nome.toLowerCase().includes(filtro) ||
     (p.categoria && p.categoria.toLowerCase().includes(filtro))
   );
-  
+
+  clearElement(tabelaProdutos);
+  vazioMensagem.style.display = produtosFiltrados.length === 0 ? (Object.keys(produtos).length === 0 ? 'flex' : 'none') : 'none';
+
   if (produtosFiltrados.length === 0) {
-    tabelaProdutos.innerHTML = '';
-    vazioMensagem.style.display = Object.keys(produtos).length === 0 ? 'flex' : 'none';
     return;
   }
-  
-  vazioMensagem.style.display = 'none';
-  
-  tabelaProdutos.innerHTML = produtosFiltrados.map(p => `
-    <tr data-id="${p.id}">
-      <td>
-        <strong>${escaparHTML(p.nome)}</strong>
-        ${p.sku ? `<br><small style="color: var(--text-secondary);">SKU: ${escaparHTML(p.sku)}</small>` : ''}
-      </td>
-      <td>${p.categoria ? escaparHTML(p.categoria) : '-'}</td>
-      <td>
-        <span class="badge-qtd ${p.quantidade <= 5 ? 'alerta' : ''}">${p.quantidade} un.</span>
-      </td>
-      <td>${formatarMoeda(p.preco)}</td>
-      <td><strong>${formatarMoeda(p.quantidade * p.preco)}</strong></td>
-      <td>
-        <div class="btn-group-small">
-          <button class="btn btn-sm btn-success" onclick="abrirModalVenda('${p.id}')">
-            <i class="fas fa-sell">Registrar Venda</i>
-          </button>
-          <button class="btn btn-sm btn-primary" onclick="editarProduto('${p.id}')">
-            <i class="fas fa-edit"> Editar Produto</i>
-          </button>
-          <button class="btn btn-sm btn-danger" onclick="deletarProduto('${p.id}')">
-            <i class="fas fa-trash"> Deletar</i>
-          </button>
-        </div>
-      </td>
-    </tr>
-  `).join('');
+
+  produtosFiltrados.forEach((p) => {
+    const row = createElement('tr', { attrs: { 'data-id': p.id } });
+    const nomeCell = createElement('td');
+    nomeCell.append(createElement('strong', { text: p.nome }));
+    if (p.sku) {
+      nomeCell.append(createElement('br'));
+      nomeCell.append(createElement('small', { className: 'sku-text', text: `SKU: ${p.sku}` }));
+    }
+
+    const categoriaCell = createElement('td', { text: p.categoria ? p.categoria : '-' });
+    const quantidadeCell = createElement('td');
+    quantidadeCell.append(createElement('span', {
+      className: `badge-qtd ${p.quantidade <= 5 ? 'alerta' : ''}`.trim(),
+      text: `${p.quantidade} un.`
+    }));
+    const precoCell = createElement('td', { text: formatarMoeda(p.preco) });
+    const totalCell = createElement('td');
+    totalCell.append(createElement('strong', { text: formatarMoeda(p.quantidade * p.preco) }));
+
+    const actionGroup = createElement('div', { className: 'btn-group-small' });
+    const vendaBtn = createElement('button', { className: 'btn btn-sm btn-success', attrs: { type: 'button' }, text: 'Registrar Venda' });
+    vendaBtn.addEventListener('click', () => abrirModalVenda(p.id));
+    const editarBtn = createElement('button', { className: 'btn btn-sm btn-primary', attrs: { type: 'button' }, text: 'Editar Produto' });
+    editarBtn.addEventListener('click', () => editarProduto(p.id));
+    const deletarBtn = createElement('button', { className: 'btn btn-sm btn-danger', attrs: { type: 'button' }, text: 'Deletar' });
+    deletarBtn.addEventListener('click', () => deletarProduto(p.id));
+    actionGroup.append(vendaBtn, editarBtn, deletarBtn);
+
+    const actionsCell = createElement('td', { children: [actionGroup] });
+    row.append(nomeCell, categoriaCell, quantidadeCell, precoCell, totalCell, actionsCell);
+    tabelaProdutos.appendChild(row);
+  });
 }
 
 // ================= ATUALIZAR STATS =================
@@ -203,7 +209,7 @@ formProduto.addEventListener("submit", async (e) => {
   const categoria = categoriaProdutoInput.value.trim();
   
   if (!nome || quantidade < 0 || preco < 0) {
-    alert("Preencha todos os campos obrigatórios corretamente!");
+    showError("Preencha todos os campos obrigatórios corretamente!");
     return;
   }
   
@@ -221,7 +227,7 @@ formProduto.addEventListener("submit", async (e) => {
     formProduto.reset();
     console.log("✅ Produto cadastrado com sucesso!");
   } catch (erro) {
-    alert("Erro ao cadastrar produto: " + erro.message);
+    showError("Erro ao cadastrar produto: " + erro.message);
   }
 });
 
@@ -230,7 +236,7 @@ function abrirModalVenda(produtoId) {
   produtoAtualSelecionado = produtos[produtoId];
   
   if (!produtoAtualSelecionado) {
-    alert("Produto não encontrado!");
+    showError("Produto não encontrado!");
     return;
   }
   
@@ -288,12 +294,12 @@ confirmarVendaBtn.addEventListener("click", async () => {
   const qtdVendida = parseInt(modalQtdVendida.value) || 0;
   
   if (qtdVendida <= 0) {
-    alert("Quantidade deve ser maior que 0!");
+    showError("Quantidade deve ser maior que 0!");
     return;
   }
   
   if (qtdVendida > produtoAtualSelecionado.quantidade) {
-    alert(`Quantidade insuficiente! Disponível: ${produtoAtualSelecionado.quantidade} un.`);
+    showError(`Quantidade insuficiente! Disponível: ${produtoAtualSelecionado.quantidade} un.`);
     return;
   }
   
@@ -338,7 +344,7 @@ confirmarVendaBtn.addEventListener("click", async () => {
     modalVenda.style.display = "none";
     produtoAtualSelecionado = null;
   } catch (erro) {
-    alert("Erro ao registrar venda: " + erro.message);
+    showError("Erro ao registrar venda: " + erro.message);
   }
 });
 
@@ -381,7 +387,7 @@ async function editarProduto(produtoId) {
       // Re-adicionar listener original
       formProduto.addEventListener("submit", handleFormProduto);
     } catch (erro) {
-      alert("Erro ao atualizar produto: " + erro.message);
+      showError("Erro ao atualizar produto: " + erro.message);
     }
   });
   
@@ -402,7 +408,7 @@ async function handleFormProduto(e) {
   const categoria = categoriaProdutoInput.value.trim();
   
   if (!nome || quantidade < 0 || preco < 0) {
-    alert("Preencha todos os campos obrigatórios corretamente!");
+    showError("Preencha todos os campos obrigatórios corretamente!");
     return;
   }
   
@@ -420,7 +426,7 @@ async function handleFormProduto(e) {
     formProduto.reset();
     console.log("✅ Produto cadastrado com sucesso!");
   } catch (erro) {
-    alert("Erro ao cadastrar produto: " + erro.message);
+    showError("Erro ao cadastrar produto: " + erro.message);
   }
 }
 
@@ -437,7 +443,7 @@ async function deletarProduto(produtoId) {
     await deleteDoc(doc(db, "estoque", produtoId));
     console.log("✅ Produto deletado com sucesso!");
   } catch (erro) {
-    alert("Erro ao deletar produto: " + erro.message);
+    showError("Erro ao deletar produto: " + erro.message);
   }
 }
 

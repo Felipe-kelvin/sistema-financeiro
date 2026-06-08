@@ -14,6 +14,8 @@ import {
   getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { firebaseConfig } from "./config.js";
+import { createElement, clearElement } from "./dom-utils.js";
+import { showError, showSuccess, showInfo } from "./ui-feedback.js";
 
 /* 🔥 SUA CONFIG FIREBASE */
 
@@ -94,7 +96,7 @@ logoutBtn.addEventListener("click", async () => {
     window.location.href = "../index.html";
   } catch (error) {
     console.error("Erro ao fazer logout:", error);
-    alert("Erro ao fazer logout");
+    showError("Erro ao fazer logout");
   }
 });
 
@@ -213,7 +215,7 @@ function interceptClick(e) {
   if (e.target.closest('[data-allow-navigation]')) return;
   e.stopImmediatePropagation();
   e.preventDefault();
-  alert('Você precisa efetuar o pagamento da mensalidade para acessar outras áreas.');
+  showInfo('Você precisa efetuar o pagamento da mensalidade para acessar outras áreas.');
 }
 
 function beforeUnloadHandler(e) {
@@ -243,77 +245,100 @@ function renderizarMensalidades() {
   const mensalidadesFiltradas = mensalidades.filter(m => {
     if (filtroAtual === "pendente") {
       return m.status !== "pago";
-    } else {
-      return m.status === "pago";
     }
+    return m.status === "pago";
   });
 
+  clearElement(mensalidadesContainer);
+
   if (mensalidadesFiltradas.length === 0) {
-    mensalidadesContainer.innerHTML = `
-      <p class="empty-state">
-        <i class="fas fa-inbox"></i> 
-        ${filtroAtual === "pendente" ? "Nenhuma mensalidade pendente" : "Nenhuma mensalidade paga"}
-      </p>
-    `;
+    const message = createElement("p", {
+      className: "empty-state",
+      children: [
+        createElement("i", { className: "fas fa-inbox" }),
+        `${filtroAtual === "pendente" ? "Nenhuma mensalidade pendente" : "Nenhuma mensalidade paga"}`
+      ]
+    });
+    mensalidadesContainer.appendChild(message);
     return;
   }
 
-  mensalidadesContainer.innerHTML = mensalidadesFiltradas.map(m => {
+  mensalidadesFiltradas.forEach((m) => {
     const vencimento = new Date(m.vencimento || m.mes);
     const hoje = new Date();
-    const statusBadge = m.status === "pago" 
-      ? `<span class="badge badge-success"><i class="fas fa-check-circle"></i> Pago</span>`
-      : vencimento < hoje
-        ? `<span class="badge badge-danger"><i class="fas fa-exclamation-circle"></i> Atrasado</span>`
-        : `<span class="badge badge-warning"><i class="fas fa-clock"></i> Pendente</span>`;
+    const card = createElement("div", { className: "mensalidade-card" });
 
-    return `
-      <div class="mensalidade-card">
-        <div class="mensalidade-header">
-          <div>
-            <h3 class="mensalidade-titulo">${escaparHTML(m.titulo || m.descricao || "Mensalidade")}</h3>
-            <p class="mensalidade-data">
-              <i class="fas fa-calendar"></i> ${formatarData(m.vencimento || m.mes)}
-            </p>
-          </div>
-          ${statusBadge}
-        </div>
+    const header = createElement("div", { className: "mensalidade-header" });
+    const titleBlock = createElement("div");
+    const titulo = createElement("h3", {
+      className: "mensalidade-titulo",
+      text: m.titulo || m.descricao || "Mensalidade"
+    });
+    const dataText = createElement("p", { className: "mensalidade-data" });
+    dataText.append(createElement("i", { className: "fas fa-calendar" }));
+    dataText.append(document.createTextNode(` ${formatarData(m.vencimento || m.mes)}`));
+    titleBlock.append(titulo, dataText);
+    header.append(titleBlock, criarStatusBadge(m.status, vencimento, hoje));
 
-        <div class="mensalidade-body">
-          <div class="info-row">
-            <span class="info-label">Valor:</span>
-            <span class="info-value valor-destaque">${formatarMoeda(m.valor || 0)}</span>
-          </div>
-          ${m.descricao ? `
-          <div class="info-row">
-            <span class="info-label">Descrição:</span>
-            <span class="info-value">${escaparHTML(m.descricao)}</span>
-          </div>
-          ` : ""}
-          ${m.status === "pago" && m.dataPagamento ? `
-          <div class="info-row">
-            <span class="info-label">Data do Pagamento:</span>
-            <span class="info-value">${formatarData(m.dataPagamento)}</span>
-          </div>
-          ` : ""}
-          ${m.status === "pago" && m.metodoPagamento ? `
-          <div class="info-row">
-            <span class="info-label">Método:</span>
-            <span class="info-value">${escaparHTML(m.metodoPagamento)}</span>
-          </div>
-          ` : ""}
-        </div>
+    const body = createElement("div", { className: "mensalidade-body" });
+    body.append(criarInfoRow("Valor:", formatarMoeda(m.valor || 0), "valor-destaque"));
 
-        <div class="mensalidade-footer">
-          ${m.status !== "pago" ? `
-          <button class="btn-pagar" onclick="abrirModalPagamento('${m.id}')">
-            <i class="fas fa-credit-card"></i> Pagar
-          </button>
-          ` : ""}
-        </div>
-      </div>
-    `;
-  }).join("");
+    if (m.descricao) {
+      body.append(criarInfoRow("Descrição:", m.descricao));
+    }
+
+    if (m.status === "pago" && m.dataPagamento) {
+      body.append(criarInfoRow("Data do Pagamento:", formatarData(m.dataPagamento)));
+    }
+
+    if (m.status === "pago" && m.metodoPagamento) {
+      body.append(criarInfoRow("Método:", m.metodoPagamento));
+    }
+
+    const footer = createElement("div", { className: "mensalidade-footer" });
+    if (m.status !== "pago") {
+      const pagarBtn = createElement("button", {
+        className: "btn-pagar",
+        attrs: { type: "button" },
+        text: "Pagar"
+      });
+      pagarBtn.appendChild(createElement("i", { className: "fas fa-credit-card" }));
+      pagarBtn.addEventListener("click", () => abrirModalPagamento(m.id));
+      footer.appendChild(pagarBtn);
+    }
+
+    card.append(header, body, footer);
+    mensalidadesContainer.appendChild(card);
+  });
+}
+
+function criarInfoRow(label, value, valueClass = "") {
+  const row = createElement("div", { className: "info-row" });
+  const labelEl = createElement("span", { className: "info-label", text: label });
+  const valueEl = createElement("span", { className: `info-value ${valueClass}`.trim(), text: value });
+  row.append(labelEl, valueEl);
+  return row;
+}
+
+function criarStatusBadge(status, vencimento, hoje) {
+  let badgeClass = "badge badge-warning";
+  let text = "Pendente";
+  let iconClass = "fas fa-clock";
+
+  if (status === "pago") {
+    badgeClass = "badge badge-success";
+    text = "Pago";
+    iconClass = "fas fa-check-circle";
+  } else if (vencimento < hoje) {
+    badgeClass = "badge badge-danger";
+    text = "Atrasado";
+    iconClass = "fas fa-exclamation-circle";
+  }
+
+  const badge = createElement("span", { className: badgeClass });
+  badge.append(createElement("i", { className: iconClass }));
+  badge.append(document.createTextNode(` ${text}`));
+  return badge;
 }
 
 // ================= ABRIR MODAL DE PAGAMENTO =================
@@ -365,8 +390,7 @@ window.addEventListener("click", (e) => {
 });
 
 function mostrarAvisoFecharModal() {
-  // Mensagem clara para o usuário
-  alert('Você precisa efetuar o pagamento da mensalidade para continuar usando o sistema. O modal permanecerá aberto até o pagamento.');
+  showInfo('Você precisa efetuar o pagamento da mensalidade para continuar usando o sistema. O modal permanecerá aberto até o pagamento.');
 }
 
 // ================= SALVAR PAGAMENTO =================
@@ -378,7 +402,7 @@ formPagamento.addEventListener("submit", async (e) => {
   // Pegar método de pagamento selecionado
   const metodoPagamento = document.querySelector('input[name="metodo-pagamento"]:checked');
   if (!metodoPagamento) {
-    alert("Por favor, selecione um método de pagamento");
+    showError("Por favor, selecione um método de pagamento");
     return;
   }
   const metodoValue = metodoPagamento.value;
@@ -387,7 +411,7 @@ formPagamento.addEventListener("submit", async (e) => {
   const observacoes = document.getElementById("observacoes").value;
 
   if (!dataPag) {
-    alert("Por favor, selecione a data do pagamento");
+    showError("Por favor, selecione a data do pagamento");
     return;
   }
 
@@ -398,7 +422,7 @@ formPagamento.addEventListener("submit", async (e) => {
     // ✅ Obter token Firebase do usuário autenticado
     const user = auth.currentUser;
     if (!user) {
-      alert("Erro: usuário não autenticado");
+      showError("Erro: usuário não autenticado");
       return;
     }
 
@@ -436,7 +460,7 @@ formPagamento.addEventListener("submit", async (e) => {
   } catch (error) {
 
     console.error(error);
-    alert("Erro ao gerar PIX");
+    showError("Erro ao gerar PIX");
 
   }
 
@@ -466,7 +490,7 @@ formPagamento.addEventListener("submit", async (e) => {
       window.location.href = data.init_point;
     } catch (error) {
       console.error(error);
-      alert("Erro ao iniciar pagamento");
+      showError("Erro ao iniciar pagamento");
     }
 
     return; // o webhook registra o pagamento, não fazemos update aqui
@@ -496,7 +520,7 @@ formPagamento.addEventListener("submit", async (e) => {
       createdAt: new Date()
     });
 
-    alert("✅ Pagamento registrado com sucesso!");
+    showSuccess("✅ Pagamento registrado com sucesso!");
     // Atualizar estado local e remover bloqueio antes de fechar o modal
     try {
       if (mensalidadeSelecionada) mensalidadeSelecionada.status = 'pago';
@@ -505,7 +529,7 @@ formPagamento.addEventListener("submit", async (e) => {
     fecharModal();
   } catch (error) {
     console.error("Erro ao registrar pagamento:", error);
-    alert("Erro ao registrar pagamento");
+    showError("Erro ao registrar pagamento");
   }
 });
 
@@ -519,12 +543,12 @@ formAdicionarMensalidade.addEventListener("submit", async (e) => {
   const descricao = document.getElementById("descricao-mensalidade").value.trim();
 
   if (!titulo || !valor || !vencimento) {
-    alert("Por favor, preencha todos os campos obrigatórios");
+    showError("Por favor, preencha todos os campos obrigatórios");
     return;
   }
 
   if (valor <= 0) {
-    alert("O valor deve ser maior que zero");
+    showError("O valor deve ser maior que zero");
     return;
   }
 
@@ -542,11 +566,11 @@ await addDoc(collection(db, "users", userUID, "mensalidades"), {
     });
 
     console.log("✅ Mensalidade salva com sucesso!");
-    alert("✅ Mensalidade adicionada com sucesso!");
+    showSuccess("✅ Mensalidade adicionada com sucesso!");
     fecharModalAdicionar();
   } catch (error) {
     console.error("❌ Erro ao salvar mensalidade:", error);
-    alert("Erro ao salvar mensalidade");
+    showError("Erro ao salvar mensalidade");
   }
 });
 // ================= COPIAR CÓDIGO PIX =================

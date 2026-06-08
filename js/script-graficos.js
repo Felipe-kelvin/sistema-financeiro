@@ -3,6 +3,7 @@ import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/fi
 import { getFirestore, collection, doc, onSnapshot, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { firebaseConfig } from "./config.js";
 import { redirecionarSePagamentoPendente } from "./utils-pagamento.js";
+import { showError } from "./ui-feedback.js";
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -58,7 +59,7 @@ logoutBtn.addEventListener("click", async () => {
     await signOut(auth);
     window.location.href = "../index.html";
   } catch (erro) {
-    alert("Erro ao sair: " + erro.message);
+    showError("Erro ao sair: " + erro.message);
   }
 });
 
@@ -440,7 +441,17 @@ function atualizarGraficoVendas(dadosVendasPorMes) {
 function mostrarErroChart(mensagem) {
   if (errorMessageEl) {
     errorMessageEl.style.display = "block";
-    errorMessageEl.innerHTML = `<strong>Erro ao carregar os gráficos.</strong><p>${mensagem}</p>`;
+    while (errorMessageEl.firstChild) {
+      errorMessageEl.removeChild(errorMessageEl.firstChild);
+    }
+
+    const strong = document.createElement("strong");
+    strong.textContent = "Erro ao carregar os gráficos.";
+
+    const paragraph = document.createElement("p");
+    paragraph.textContent = mensagem;
+
+    errorMessageEl.append(strong, paragraph);
   }
 
   if (ctxEntradasSaidas) {

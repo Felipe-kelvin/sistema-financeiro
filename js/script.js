@@ -19,6 +19,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { firebaseConfig } from "./config.js";
 import { redirecionarSePagamentoPendente } from "./utils-pagamento.js";
+import { showSuccess, showError } from "./ui-feedback.js";
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -108,8 +109,10 @@ function calcularSaldo() {
     });
   }
 
-  if(saldo < 0){
+  if (saldo < 0) {
     saldoEl.style.color = "red";
+  } else {
+    saldoEl.style.color = "";
   }
 
   saldoEl.textContent = saldo.toLocaleString('pt-BR', {
@@ -128,13 +131,13 @@ form.addEventListener("submit", async (e) => {
   const mes = document.getElementById("mes").value;
 
   if (!descricao || isNaN(valor) || valor <= 0 || !tipo || !mes) {
-    alert("Preencha todos os dados corretamente! Todos os campos são obrigatórios.");
+    showError("Preencha todos os dados corretamente! Todos os campos são obrigatórios.");
     return;
   }
 
   if (!userUID) {
     console.error("Tentativa de criar transação sem UID de usuário autenticado.");
-    alert("Erro de autenticação: usuário não identificado.");
+    showError("Erro de autenticação: usuário não identificado.");
     return;
   }
 
@@ -143,7 +146,7 @@ form.addEventListener("submit", async (e) => {
 
   if (!auth.currentUser) {
     console.error("Nenhum usuário autenticado no Firebase Auth no momento do submit.");
-    alert("Erro de autenticação: usuário não está logado no Firebase.");
+    showError("Erro de autenticação: usuário não está logado no Firebase.");
     return;
   }
 
@@ -159,12 +162,12 @@ form.addEventListener("submit", async (e) => {
     );
 
     // Mostrar feedback positivo
-    alert("Transação adicionada com sucesso!");
+    showSuccess("Transação adicionada com sucesso!");
     form.reset();
 
   } catch (error) {
     console.error("Erro ao adicionar transação:", error);
-    alert(`Erro ao adicionar transação: ${error.code || error.message}`);
+    showError(`Erro ao adicionar transação: ${error.code || error.message}`);
   }
 });
 
@@ -175,6 +178,6 @@ logoutBtn.addEventListener("click", async () => {
     window.location.href = "../index.html";
   } catch (error) {
     console.error("Erro ao fazer logout:", error);
-    alert("Erro ao fazer logout");
+    showError("Erro ao fazer logout");
   }
 });
