@@ -249,8 +249,8 @@
         </div>
 
         <div class="form-actions">
-          <button type="button" class="btn-secondary" onclick="fecharModalAdicionar()">Cancelar</button>
-          <button type="submit" class="btn-primary">
+          <button type="button" class="btn btn-secondary" onclick="fecharModalAdicionar()">Cancelar</button>
+          <button type="submit" class="btn btn-primary">
             <i class="fas fa-save"></i> Salvar Mensalidade
           </button>
         </div>
@@ -507,7 +507,7 @@ function renderizarMensalidades() {
 
         <div class="mensalidade-footer">
           ${m.status !== "pago" ? `
-          <button class="btn-pagar" onclick="abrirModalPagamento('${m.id}')">
+          <button class="btn btn-pagar" onclick="abrirModalPagamento('${m.id}')">
             <i class="fas fa-credit-card"></i> Pagar
           </button>
           ` : ""}
