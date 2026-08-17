@@ -250,22 +250,26 @@ function atualizarGraficos(dadosPorMes) {
           {
             label: "Entradas",
             data: valoresEntradas,
-            backgroundColor: "rgba(16, 185, 129, 0.9)",
+            backgroundColor: "rgba(16, 185, 129, 0.92)",
             borderColor: "rgba(5, 150, 105, 1)",
             borderWidth: 1,
             borderRadius: 10,
             borderSkipped: false,
-            maxBarThickness: 50,
+            maxBarThickness: 46,
+            barPercentage: 0.76,
+            categoryPercentage: 0.8,
           },
           {
             label: "Saídas",
             data: valoresSaidas,
-            backgroundColor: "rgba(239, 68, 68, 0.9)",
+            backgroundColor: "rgba(239, 68, 68, 0.92)",
             borderColor: "rgba(185, 28, 28, 1)",
             borderWidth: 1,
             borderRadius: 10,
             borderSkipped: false,
-            maxBarThickness: 50,
+            maxBarThickness: 46,
+            barPercentage: 0.76,
+            categoryPercentage: 0.8,
           }
         ]
       },
@@ -451,7 +455,9 @@ function atualizarGraficoVendas(dadosVendasPorMes) {
             yAxisID: "y1",
             borderRadius: 8,
             borderWidth: 1,
-            maxBarThickness: 52,
+            maxBarThickness: 44,
+            barPercentage: 0.7,
+            categoryPercentage: 0.75,
           },
           {
             type: "bar",
@@ -462,7 +468,9 @@ function atualizarGraficoVendas(dadosVendasPorMes) {
             yAxisID: "y",
             borderRadius: 8,
             borderWidth: 1,
-            maxBarThickness: 52,
+            maxBarThickness: 44,
+            barPercentage: 0.7,
+            categoryPercentage: 0.75,
           },
           {
             type: "bar",
@@ -473,7 +481,9 @@ function atualizarGraficoVendas(dadosVendasPorMes) {
             yAxisID: "y",
             borderRadius: 8,
             borderWidth: 1,
-            maxBarThickness: 52,
+            maxBarThickness: 44,
+            barPercentage: 0.7,
+            categoryPercentage: 0.75,
           }
         ]
       },
