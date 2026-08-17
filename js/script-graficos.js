@@ -22,11 +22,23 @@ const ctxVendasProdutos = document.getElementById("chart-vendas-produtos");
 const ctxSaldoMensal = document.getElementById("chart-saldo-mensal");
 const errorMessageEl = document.getElementById("graficos-error");
 const logoutBtn = document.getElementById("logout-btn");
+const rangeButtons = document.querySelectorAll(".filter-btn");
 
 let userUID = null;
 let chartEntradasSaidas = null;
 let chartVendasProdutos = null;
 let chartSaldoMensal = null;
+let currentRange = "all";
+let transacoesData = {};
+let vendasData = {};
+
+rangeButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    currentRange = button.dataset.range || "all";
+    rangeButtons.forEach((btn) => btn.classList.toggle("active", btn === button));
+    atualizarDashboard();
+  });
+});
 
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
@@ -98,8 +110,8 @@ function escutarTransacoes() {
       dadosPorMes[mes].saldo = dadosPorMes[mes].entradas - dadosPorMes[mes].saidas;
     });
 
-    atualizarResumo(totalEntradas, totalSaidas);
-    atualizarGraficos(dadosPorMes);
+    transacoesData = dadosPorMes;
+    atualizarDashboard();
   });
 }
 
@@ -141,9 +153,54 @@ function escutarVendas() {
       dadosVendasPorMes[mes].lucro += lucro;
     });
 
-    atualizarResumoVendas(totalProdutosVendidos, totalCustos, totalLucro);
-    atualizarGraficoVendas(dadosVendasPorMes);
+    vendasData = dadosVendasPorMes;
+    atualizarDashboard();
   });
+}
+
+function atualizarDashboard() {
+  const dadosFiltrados = filtrarDadosPorPeriodo(transacoesData);
+  const vendasFiltradas = filtrarDadosPorPeriodo(vendasData, "vendas");
+
+  const totalEntradas = Object.values(dadosFiltrados).reduce((acc, item) => acc + (Number(item.entradas) || 0), 0);
+  const totalSaidas = Object.values(dadosFiltrados).reduce((acc, item) => acc + (Number(item.saidas) || 0), 0);
+  const saldo = totalEntradas - totalSaidas;
+
+  const totalProdutosVendidos = Object.values(vendasFiltradas).reduce((acc, item) => acc + (Number(item.quantidade) || 0), 0);
+  const totalCustos = Object.values(vendasFiltradas).reduce((acc, item) => acc + (Number(item.custos) || 0), 0);
+  const totalLucro = Object.values(vendasFiltradas).reduce((acc, item) => acc + (Number(item.lucro) || 0), 0);
+
+  atualizarResumo(totalEntradas, totalSaidas);
+  atualizarResumoVendas(totalProdutosVendidos, totalCustos, totalLucro);
+  atualizarGraficos(dadosFiltrados);
+  atualizarGraficoVendas(vendasFiltradas);
+}
+
+function filtrarDadosPorPeriodo(dados, tipo = "transacoes") {
+  const meses = Object.keys(dados).sort();
+  if (!meses.length) return {};
+
+  let limite = meses.length;
+  const range = currentRange;
+
+  if (range !== "all") {
+    limite = Number(range);
+  }
+
+  const sliceStart = Math.max(0, meses.length - limite);
+  const mesesSelecionados = meses.slice(sliceStart);
+  const resultado = {};
+
+  mesesSelecionados.forEach((mes) => {
+    if (tipo === "vendas") {
+      resultado[mes] = dados[mes] || { quantidade: 0, custos: 0, lucro: 0 };
+      return;
+    }
+
+    resultado[mes] = dados[mes] || { entradas: 0, saidas: 0, saldo: 0 };
+  });
+
+  return resultado;
 }
 
 function atualizarResumo(entradas, saidas) {
@@ -193,50 +250,77 @@ function atualizarGraficos(dadosPorMes) {
           {
             label: "Entradas",
             data: valoresEntradas,
-            backgroundColor: "#10b981",
-            borderRadius: 6,
+            backgroundColor: "rgba(16, 185, 129, 0.9)",
+            borderColor: "rgba(5, 150, 105, 1)",
+            borderWidth: 1,
+            borderRadius: 10,
+            borderSkipped: false,
+            maxBarThickness: 50,
           },
           {
             label: "Saídas",
             data: valoresSaidas,
-            backgroundColor: "#ef4444",
-            borderRadius: 6,
+            backgroundColor: "rgba(239, 68, 68, 0.9)",
+            borderColor: "rgba(185, 28, 28, 1)",
+            borderWidth: 1,
+            borderRadius: 10,
+            borderSkipped: false,
+            maxBarThickness: 50,
           }
         ]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        animation: {
+          duration: 700,
+          easing: "easeOutQuart"
+        },
         interaction: {
           mode: "index",
           intersect: false,
         },
+        layout: {
+          padding: { top: 12, right: 8, left: 8, bottom: 8 }
+        },
         scales: {
           x: {
-            stacked: false,
-            grid: {
-              display: false
-            }
+            grid: { display: false },
+            ticks: { color: "#475569", font: { weight: "600" } },
+            border: { display: false }
           },
           y: {
             beginAtZero: true,
             ticks: {
+              color: "#475569",
               callback: (value) => formatarMoeda(value)
-            }
+            },
+            grid: { color: "rgba(148, 163, 184, 0.15)", drawBorder: false },
+            border: { display: false }
           }
         },
         plugins: {
           legend: {
-            position: "top"
+            position: "top",
+            labels: {
+              usePointStyle: true,
+              pointStyle: "circle",
+              padding: 18,
+              color: "#334155",
+              font: { weight: "600" }
+            }
           },
           tooltip: {
+            backgroundColor: "rgba(15, 23, 42, 0.92)",
+            borderColor: "rgba(148, 163, 184, 0.25)",
+            borderWidth: 1,
+            padding: 12,
             callbacks: {
               label: (context) => `${context.dataset.label}: ${formatarMoeda(context.parsed.y)}`
             }
           }
         }
-      },
-      plugins: [valueLabelPlugin]
+      }
     });
   } catch (erro) {
     mostrarErroChart("Não foi possível inicializar o gráfico de entradas e saídas. " + erro.message);
@@ -245,15 +329,21 @@ function atualizarGraficos(dadosPorMes) {
 
   try {
     chartSaldoMensal = new Chart(ctxSaldoMensal, {
-      type: "bar",
+      type: "line",
       data: {
         labels,
         datasets: [
           {
             label: "Saldo",
             data: valoresSaldo,
-            backgroundColor: valoresSaldo.map((saldo) => saldo >= 0 ? "#2563eb" : "#d97706"),
-            borderRadius: 6,
+            borderColor: "#2563eb",
+            backgroundColor: "rgba(37, 99, 235, 0.18)",
+            fill: true,
+            tension: 0.35,
+            pointRadius: 4,
+            pointBackgroundColor: "#2563eb",
+            pointBorderColor: "#ffffff",
+            pointBorderWidth: 2,
           }
         ]
       },
@@ -262,15 +352,16 @@ function atualizarGraficos(dadosPorMes) {
         maintainAspectRatio: false,
         scales: {
           x: {
-            grid: {
-              display: false
-            }
+            grid: { display: false },
+            ticks: { color: "#475569" }
           },
           y: {
             beginAtZero: false,
             ticks: {
+              color: "#475569",
               callback: (value) => formatarMoeda(value)
-            }
+            },
+            grid: { color: "rgba(148, 163, 184, 0.15)" }
           }
         },
         plugins: {
@@ -283,8 +374,7 @@ function atualizarGraficos(dadosPorMes) {
             }
           }
         }
-      },
-      plugins: [valueLabelPlugin]
+      }
     });
   } catch (erro) {
     mostrarErroChart("Não foi possível inicializar o gráfico de saldo. " + erro.message);
@@ -356,52 +446,68 @@ function atualizarGraficoVendas(dadosVendasPorMes) {
             type: "bar",
             label: "Produtos vendidos",
             data: valoresQuantidade,
-            backgroundColor: "#0ea5e9",
+            backgroundColor: "rgba(14, 165, 233, 0.9)",
+            borderColor: "rgba(2, 132, 199, 1)",
             yAxisID: "y1",
-            borderRadius: 6,
+            borderRadius: 8,
             borderWidth: 1,
+            maxBarThickness: 52,
           },
           {
             type: "bar",
             label: "Custos",
             data: valoresCustos,
-            backgroundColor: "#f97316",
+            backgroundColor: "rgba(249, 115, 22, 0.88)",
+            borderColor: "rgba(234, 88, 12, 1)",
             yAxisID: "y",
-            borderRadius: 6,
+            borderRadius: 8,
             borderWidth: 1,
+            maxBarThickness: 52,
           },
           {
             type: "bar",
             label: "Lucro",
             data: valoresLucro,
-            backgroundColor: "#16a34a",
+            backgroundColor: "rgba(22, 163, 74, 0.9)",
+            borderColor: "rgba(21, 128, 61, 1)",
             yAxisID: "y",
-            borderRadius: 6,
+            borderRadius: 8,
             borderWidth: 1,
+            maxBarThickness: 52,
           }
         ]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        animation: {
+          duration: 700,
+          easing: "easeOutQuart"
+        },
         interaction: {
           mode: "index",
           intersect: false,
         },
+        layout: {
+          padding: { top: 12, right: 8, left: 8, bottom: 8 }
+        },
         scales: {
           x: {
             stacked: false,
-            grid: {
-              display: false
-            }
+            grid: { display: false },
+            ticks: { color: "#475569", font: { weight: "600" } },
+            border: { display: false }
           },
           y: {
             type: "linear",
             position: "left",
             beginAtZero: true,
             ticks: {
+              color: "#475569",
               callback: (value) => formatarMoeda(value)
-            }
+            },
+            grid: { color: "rgba(148, 163, 184, 0.15)", drawBorder: false },
+            border: { display: false }
           },
           y1: {
             type: "linear",
@@ -411,15 +517,28 @@ function atualizarGraficoVendas(dadosVendasPorMes) {
               drawOnChartArea: false
             },
             ticks: {
+              color: "#475569",
               callback: (value) => formatarNumero(value)
-            }
+            },
+            border: { display: false }
           }
         },
         plugins: {
           legend: {
-            position: "bottom"
+            position: "bottom",
+            labels: {
+              usePointStyle: true,
+              pointStyle: "circle",
+              padding: 18,
+              color: "#334155",
+              font: { weight: "600" }
+            }
           },
           tooltip: {
+            backgroundColor: "rgba(15, 23, 42, 0.92)",
+            borderColor: "rgba(148, 163, 184, 0.25)",
+            borderWidth: 1,
+            padding: 12,
             callbacks: {
               label: (context) => {
                 if (context.dataset.yAxisID === "y") {
