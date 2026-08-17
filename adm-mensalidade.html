@@ -695,51 +695,45 @@ formAdicionarMensalidade.addEventListener("submit", async (e) => {
   const aplicarParaTodos = document.getElementById("aplicar-para-todos").checked;
 
   try {
-    console.log("💾 Salvando nova mensalidade...");
+    console.log("💾 Salvando nova mensalidade via endpoint admin...");
 
-    if (aplicarParaTodos) {
-      const usuariosSnapshot = await getDocs(collection(db, "users"));
-      const usuarios = usuariosSnapshot.docs;
-
-      if (usuarios.length === 0) {
-        alert("Nenhum usuário cadastrado para aplicar a mensalidade.");
-        return;
-      }
-
-      await Promise.all(usuarios.map((usuarioDoc) => {
-        return addDoc(collection(db, "users", usuarioDoc.id, "mensalidades"), {
-          titulo: titulo,
-          valor: valor,
-          vencimento: new Date(vencimento),
-          descricao: descricao || "",
-          status: "pendente",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          criadoPor: userUID
-        });
-      }));
-
-      console.log("✅ Mensalidade salva para todos os usuários com sucesso!");
-      alert("✅ Mensalidade adicionada para todos os usuários com sucesso!");
-    } else {
-      await addDoc(collection(db, "users", userUID, "mensalidades"), {
-        titulo: titulo,
-        valor: valor,
-        vencimento: new Date(vencimento),
-        descricao: descricao || "",
-        status: "pendente",
-        createdAt: new Date(),
-        updatedAt: new Date()
-      });
-
-      console.log("✅ Mensalidade salva com sucesso!");
-      alert("✅ Mensalidade adicionada com sucesso!");
+    const user = auth.currentUser;
+    if (!user) {
+      alert("Usuário não autenticado");
+      return;
     }
+
+    const token = await user.getIdToken();
+    const response = await fetch("/api/admin-criar-mensalidade", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        titulo,
+        valor,
+        vencimento,
+        descricao,
+        aplicarParaTodos
+      })
+    });
+
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(result.error || "Erro ao salvar mensalidade");
+    }
+
+    console.log("✅ Mensalidade salva com sucesso via backend!");
+    alert(aplicarParaTodos
+      ? "✅ Mensalidade adicionada para todos os usuários com sucesso!"
+      : "✅ Mensalidade adicionada com sucesso!");
 
     fecharModalAdicionar();
   } catch (error) {
     console.error("❌ Erro ao salvar mensalidade:", error);
-    alert("Erro ao salvar mensalidade");
+    alert(error.message || "Erro ao salvar mensalidade");
   }
 });
 // ================= COPIAR CÓDIGO PIX =================

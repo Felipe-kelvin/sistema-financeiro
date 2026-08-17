@@ -166,7 +166,8 @@
                 // 📦 cria estrutura no Firestore
                 await setDoc(doc(db, "users", user.uid), {
                     criadoEm: new Date(),
-                    email: user.email
+                    email: user.email,
+                    role: "user"
                 });
 
                 alert("Usuário cadastrado com sucesso!");
